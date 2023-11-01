@@ -147,7 +147,7 @@ class ModelTrainer(PatchHanger):
         self.testing_shuffle = config.testing_shuffle
         self.test_chunks = config.test_chunks
         self.seed = config.seed
-        self.slide_level_accuracy = config.slide_level_accuracy
+        self.slide_level_accuracy = config.calculate_slide_level_accuracy
         self.slide_level_accuracy_threshold = config.slide_level_accuracy_threshold
         self.slide_level_accuracy_verbose = config.slide_level_accuracy_verbose
 
