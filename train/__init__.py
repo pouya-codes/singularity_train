@@ -109,6 +109,7 @@ class ModelTrainer(PatchHanger):
         # hyperparameters
         self.train_model = config.train_model
         self.batch_size = config.batch_size
+        self.weighted_sampler = config.weighted_sampler
         self.validation_interval = config.validation_interval
         self.epochs = config.epochs
         # app administration
@@ -437,7 +438,7 @@ class ModelTrainer(PatchHanger):
         gpu_devices = gpu_selector(self.gpu_id, self.number_of_gpus)
         model = self.build_model(gpu_devices)
         if (self.train_model) :
-            training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True)
+            training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True, weighted_sampler=self.weighted_sampler)
             validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
             self.train(model, training_loader, validation_loader)
             self.test(model, validation_loader,'Validation')

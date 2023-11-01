@@ -76,6 +76,12 @@ def create_parser(parser):
                 help="Batch size is the number of patches to put in a batch. "
                 "This flag sets the batch size to use on training, validation and test datasets.")
 
+        parser.add_argument("--weighted_sampler", type=str2bool, nargs='?',
+                        const=True, default=False, required=False,
+                help="Whether we use weighted sampler or not."
+                     "By using the weighted sampler you can ensure that each batch "
+                     "sees a proportional number of all classes")
+
         parser.add_argument("--validation_interval", type=int, required=True,
                 help="The interval of the training loop to start validating model.")
 
