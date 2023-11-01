@@ -1,22 +1,13 @@
-# Singularity Train - a python module to train deep learning models on histopathology data
-
-### Development Information ###
-
-```
-**Before running any experiment to be sure you are using the latest commits of all modules run the following script:**
-```
-(cd /projects/ovcare/classification/singularity_modules ; ./update_modules.sh --bcgsc-pass your/bcgsc/path)
-```
-
+# Singularity Train
+Singularity Train is a Python module designed for training deep learning models on histopathology data. It takes in a JSON file of one or more chunks (split JSON file or group JSON file) that contain the patch paths to feed into the classifier. The module allows for extensive model configuration and tuning using hyperparameters specified in a separate JSON file. It also supports progressive resizing, a technique that enables the model to be trained on different input sizes.
 ### Usage ###
-```
 
 usage: app.py [-h] {from-experiment-manifest,from-arguments} ...
 
 Trains a model for patch classification. This process does the training in the following manner:
 
  (1) Takes in a JSON file (aka. file of one or more chunks) that is either a split JSON file created by `singularity_create_cross_validation_groups`, or a group JSON file created by `singularity_create_groups` specified by --chunk_file_location. Each chunk contains patch paths to feed into the classifier. Use --training_chunks to select the chunks to include in your training set, etc. JSON files use Mitch's format for groups i.e. it is a json file with the format
-
+```
 {
     "chunks": [
         {
@@ -26,9 +17,10 @@ Trains a model for patch classification. This process does the training in the f
         ...
     ]
 }
+```
 
  (2) The flag --model_config_location specifies a path to a JSON file containing model hyperparameters. It is a residue of an old config format that didn't have a time to get refactored. For most of the experiments at AIM Lab, we currently use the below config JSON. The primary change is to set the num_subtypes
-
+```
 {
     "model" :{
         "num_subtypes" : 2,
@@ -83,22 +75,19 @@ Trains a model for patch classification. This process does the training in the f
         }
     }
 }
+```
 
-    (2.1) If you do not want to use scheduler, remove it from the JSON file.
+(2.1) If you do not want to use scheduler, remove it from the JSON file.
 
- (3) For each epoch (specified by --epochs), we train the classifier using all patches in the training set, feeding the classifier a batch of patches (with size specified by --batch_size). At every batch interval (specififed by --validation_interval) we run validation loop and save (or overwrite) the model if it achieves the as of yet highest validation accuracy.
+(3) For each epoch (specified by --epochs), we train the classifier using all patches in the training set, feeding the classifier a batch of patches (with size specified by --batch_size). At every batch interval (specififed by --validation_interval) we run validation loop and save (or overwrite) the model if it achieves the as of yet highest validation accuracy.
 
 positional arguments:
   {from-experiment-manifest,from-arguments}
-                        Choose whether to use arguments from experiment manifest or from commandline
-    from-experiment-manifest
-                        Use experiment manifest
-
-    from-arguments      Use arguments
+                        Choose whether to use arguments from the experiment manifest or from command line
 
 optional arguments:
   -h, --help            show this help message and exit
-
+```
 usage: app.py from-experiment-manifest [-h] [--component_id COMPONENT_ID]
                                        experiment_manifest_location
 
@@ -414,11 +403,7 @@ Model definition and augmentations are defined in the `config.json` file. It is 
 3.4.1. `use_size_jitter`: {true,false} -> if true, add size_jitter to the augmentation list.
 3.4.2. `ratio`: {float} -> ratio of the original image size
 3.4.3. `probability`: {float} -> probability of doing this augmentation
-<<<<<<< HEAD
-3.4.4. `color`: {white,black} -> the color of padding when use ratio less than 1.
-=======
 3.4.4. `color`: {white,black} -> the color of padding when the image is resized smaller
->>>>>>> refs/rewritten/Added-Gradcam
 3.4.5. `dynamic_bool`: {true, false} -> if true, choose a random value between size*(1-ratio) and size*(1+ratio) inclusive to resize the image. If false, only choose either size*(1-ratio) or size*(1+ratio) for resizing. Default false.
 3.5. `cut_out`:
 3.5.1. `use_num_cut`: {true,false} -> if true, add num_cut to the augmentation list.
