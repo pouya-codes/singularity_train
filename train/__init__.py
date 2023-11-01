@@ -156,21 +156,19 @@ class ModelTrainer(PatchHanger):
         if not os.path.exists(self.writer_log_dir_location):
             os.makedirs(self.writer_log_dir_location)
         self.writer = SummaryWriter(log_dir=self.writer_log_dir_location)
-        # raw
-        self.raw_subtypes = config.subtypes
-        self.raw_patch_pattern = config.patch_pattern
-        # model_file_location
         self.model_file_location = os.path.join(self.model_dir_location,
                 f'{self.instance_name}.pth')
+        self.config = config
 
-        print(20*'.') # begin
-        for key ,value in config.__dict__.items() :
-            if key!="subparser" :
-                print(f"{key}: {value}")
-        print(20*'...') # end
-        print(f'Instance name: {self.instance_name}')
-
-
+    def print_parameters(self):
+        parameters = self.config.__dict__.copy()
+        parameters['instance_name'] = self.instance_name
+        parameters['model_file_location'] = self.model_file_location
+        parameters['writer_log_dir_location'] = self.writer_log_dir_location
+        payload = yaml.dump(parameters)
+        print('---') # begin YAML
+        print(payload)
+        print('...') # end YAML
 
     def validate(self, model, validation_loader, iter_idx):
         """Runs the validation loop
@@ -428,7 +426,11 @@ class ModelTrainer(PatchHanger):
             self.writer.close()
 
     def run(self):
-        setup_log_file(self.log_dir_location, self.instance_name)
+        if self.train_model:
+            setup_log_file(self.log_dir_location, self.instance_name)
+        if self.testing_model:
+            setup_log_file(self.test_log_dir_location, self.instance_name)
+        self.print_parameters()
         gpu_devices = gpu_selector(self.gpu_id, self.number_of_gpus)
         model = self.build_model(gpu_devices)
         if (self.train_model) :
@@ -437,7 +439,6 @@ class ModelTrainer(PatchHanger):
             self.train(model, training_loader, validation_loader)
             self.test(model, validation_loader,'Validation')
         if (self.testing_model) :
-            setup_log_file(self.test_log_dir_location, self.instance_name)
             test_loader = self.create_data_loader(self.test_chunks, shuffle=self.testing_shuffle)
             if (self.best_model_state_dict and not self.test_model_file_location):
                 model.model.load_state_dict(self.best_model_state_dict)
