@@ -6,3 +6,6 @@ __pycache__/
 .pytest_cache
 .idea
 sample_manifest_local_test.yaml
+submodule_cv/
+submodule_utils/
+.idea/
