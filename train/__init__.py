@@ -240,6 +240,8 @@ class ModelTrainer(object):
                     dynamic_ncols=True, leave=True, position=0):
                 iter_idx += 1
                 batch_data, batch_labels = data
+                batch_data = batch_data.cuda()
+                batch_labels = batch_labels.cuda()
                 logits, probs, output = model.forward(batch_data)
                 model.optimize_parameters(logits, batch_labels, output)
                 if iter_idx % self.validation_interval == 0:
