@@ -30,7 +30,7 @@ def build_model(model_config):
     return aim_models.DeepModel(model_config)
 
 def setup_log_file(log_folder_path, log_name):
-    os.makedirs(log_folder_path, exist_ok = True)
+    os.makedirs(log_folder_path, exist_ok=True)
     l_path = os.path.join(log_folder_path, "log_{}.txt".format(log_name))
     sys.stdout = aim_logger.Logger(l_path)
 
@@ -102,6 +102,7 @@ class ModelTrainer(object):
             training_shuffle=False,
             validation_shuffle=False):
         '''
+        Changes:
         test_name => experiment_name
         validation_frequency => validation_interval
         epochs
@@ -138,6 +139,12 @@ class ModelTrainer(object):
         self.seed = seed
         self.training_shuffle = training_shuffle
         self.validation_shuffle = validation_shuffle
+        # raw
+        self.raw_subtypes = self.category_to_arguments(self.CategoryEnum)
+        self.raw_patch_pattern = patch_pattern
+        # model_file_location
+        self.model_file_location = os.path.join(self.model_dir_location,
+                f'{self.train_instance_name}.pth')
 
     @classmethod
     def from_config_file(cls, config_file_location):
@@ -146,6 +153,39 @@ class ModelTrainer(object):
     @classmethod
     def from_arguments(cls, config_file_location):
         pass
+
+    def print_parameters(self):
+        '''Print argument parameters
+        '''
+        payload = yaml.dump({
+            ## Arguments
+            'experiment_name':     self.experiment_name,
+            'batch_size':          self.batch_size,
+            'validation_interval': self.validation_interval,
+            'epochs':              self.epochs,
+            'training_chunks':     self.training_chunks,
+            'validation_chunks':   self.validation_chunks,
+            'is_binary':           self.is_binary,
+            'subtypes':            self.raw_subtypes,
+            'patch_pattern': self.raw_patch_pattern,
+            'chunk_file_location':   self.chunk_file_location,
+            'log_dir_location':    self.log_dir_location,
+            'model_dir_location': self.model_dir_location,
+            'model_config_location': self.model_config_location,
+            'patch_location':    self.patch_location,
+            'num_patch_workers': self.num_patch_workers,
+            'num_validation_batches': self.num_validation_batches,
+            'gpu_id': self.gpu_id,
+            'seed':   self.seed,
+            'training_shuffle': self.training_shuffle,
+            'validation_shuffle': self.validation_shuffle,
+            # Generated values
+            'instance_name': self.train_instance_name,
+            'model_file_location': self.model_file_location
+        })
+        print('---') # begin YAML
+        print(payload)
+        print('...') # end YAML
 
     def load_model_config(self):
         with open(self.model_config_location) as f:
@@ -252,13 +292,13 @@ class ModelTrainer(object):
                         model.save_state(self.model_dir_location,
                                 self.train_instance_name,
                                 iter_idx, epoch)
-            print(f'Epoch: {epoch}')
+            print(f'\nEpoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
             print(f'Peach accuracy at iteration: {max_val_acc_idx}')
 
     def run(self):
-        if self.log_dir_location:
-            setup_log_file(self.log_dir_location, self.train_instance_name)
+        setup_log_file(self.log_dir_location, self.train_instance_name)
+        self.print_parameters()
         print(f'Instance name: {self.train_instance_name}')
         gpu_selector(self.gpu_id)
         training_loader = self.create_data_loader(self.training_chunks,
