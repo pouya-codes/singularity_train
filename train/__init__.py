@@ -455,8 +455,13 @@ class ModelTrainer(PatchHanger):
                     if (self.early_stopping):
                         early_stopping(val_loss, model.model)
                         if early_stopping.early_stop:
-                            print("Early stopping")
-                            break
+                            print(f'\nEarly stopping at Epoch: {epoch}')
+                            print(f'Peak accuracy: {max_val_acc}')
+                            print(f'Peach accuracy at iteration: {max_val_acc_idx}')
+                            self.writer.close()
+                            return
+
+
 
                 self.writer.flush()
             print(f'\nEpoch: {epoch}')
