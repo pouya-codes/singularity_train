@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name toreadme
 #SBATCH --cpus-per-task 1
-#SBATCH --output /home/poahmadvand/ml/slurm/classification/toreadme/toreadme.%j.out
+#SBATCH --output2 /home/poahmadvand/ml/slurm/classification/toreadme/toreadme.%j.out
 #SBATCH --error  /home/poahmadvand/ml/slurm/classification/toreadme/toreadme.%j.out
 #SBATCH -w dlhost04
 #SBATCH -p rtx5000

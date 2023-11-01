@@ -8,7 +8,7 @@
 
 ```
 Date Created: 22 July 2020
-Last Update: Fri Dec  4 15:24:45 PST 2020 by pouya
+Last Update: Fri Mar  5 16:37:09 PST 2021 by pouya
 Developer: Colin Chen
 Version: 1.0
 ```
@@ -123,10 +123,11 @@ usage: app.py from-arguments [-h] --experiment_name EXPERIMENT_NAME
                              [--number_of_gpus NUMBER_OF_GPUS] [--seed SEED]
                              [--training_shuffle] [--validation_shuffle]
                              [--writer_log_dir_location WRITER_LOG_DIR_LOCATION]
-                             {early_stopping,test_model} ...
+                             {early_stopping,test_model,slide_level_accuracy}
+                             ...
 
 positional arguments:
-  {early_stopping,test_model}
+  {early_stopping,test_model,slide_level_accuracy}
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -228,6 +229,9 @@ usage: app.py from-arguments early_stopping [-h]
                                             [--detailed_test_result]
                                             [--testing_shuffle]
                                             [--test_chunks TEST_CHUNKS [TEST_CHUNKS ...]]
+                                            [--calculate_slide_level_accuracy [CALCULATE_SLIDE_LEVEL_ACCURACY]]
+                                            [--slide_level_accuracy_threshold SLIDE_LEVEL_ACCURACY_THRESHOLD]
+                                            [--slide_level_accuracy_verbose [SLIDE_LEVEL_ACCURACY_VERBOSE]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -264,6 +268,18 @@ optional arguments:
   --test_chunks TEST_CHUNKS [TEST_CHUNKS ...]
                         Space separated number IDs specifying chunks to use for testing.
                          (default: [2])
+
+  --calculate_slide_level_accuracy [CALCULATE_SLIDE_LEVEL_ACCURACY]
+                        Weather calculate slide level accuracyDefault uses False
+                         (default: False)
+
+  --slide_level_accuracy_threshold SLIDE_LEVEL_ACCURACY_THRESHOLD
+                        Minimum threshold that the patch labels probabilities should pass to be considered in the slide level voting.Default: 1/number_of_classes
+                         (default: 0)
+
+  --slide_level_accuracy_verbose [SLIDE_LEVEL_ACCURACY_VERBOSE]
+                        Verbose the detail for slide level accuracyDefault uses False
+                         (default: False)
 
 usage: app.py from-arguments test_model [-h]
 

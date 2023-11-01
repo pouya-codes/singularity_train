@@ -3,7 +3,7 @@ try_me:
     train_model: true
     batch_size: 32
     validation_interval: 50
-    epochs: 10
+    epochs: 1
     subtypes:
       - G1=0
       - G2=1
@@ -25,3 +25,7 @@ try_me:
       test_model_file_location: /path/to/model.pth
       test_log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/logs/test
       detailed_test_result:
+    slide_level_accuracy:
+      calculate_slide_level_accuracy: True
+      slide_level_accuracy_threshold: 0.2
+      slide_level_accuracy_verbose: True

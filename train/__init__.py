@@ -6,6 +6,7 @@ import enum
 import csv
 
 import yaml, random
+from submodule_utils.accuracy.slide_level_accuracy import SlideLevelAccuracy
 from tqdm import tqdm
 from pynvml import *
 import numpy as np
@@ -146,6 +147,11 @@ class ModelTrainer(PatchHanger):
         self.testing_shuffle = config.testing_shuffle
         self.test_chunks = config.test_chunks
         self.seed = config.seed
+        self.slide_level_accuracy = config.slide_level_accuracy
+        self.slide_level_accuracy_threshold = config.slide_level_accuracy_threshold
+        self.slide_level_accuracy_verbose = config.slide_level_accuracy_verbose
+
+
         self.best_model_state_dict = None
 
 
@@ -160,7 +166,8 @@ class ModelTrainer(PatchHanger):
         self.model_file_location = os.path.join(self.model_dir_location,
                 f'{self.instance_name}.pth')
         self.config = config
-        self.class_weight = self.model_config["use_weighted_loss"]["weight"]
+        self.class_weight = self.model_config["use_weighted_loss"]["weight"] if \
+            self.model_config["use_weighted_loss"]["use_weighted_loss"] else None
 
     def print_parameters(self):
         parameters = self.config.__dict__.copy()
@@ -250,7 +257,7 @@ class ModelTrainer(PatchHanger):
                 print('Warning:', e)
                 overall_auc = 0.00
         else:
-            overall_auc = roc_auc_score(labels, preds, average='macro')
+            overall_auc = roc_auc_score(labels, probs, average='macro')
         # disply results
         if verbose:
             print('Acc: {:.2f}\%'.format(overall_acc * 100))
@@ -340,8 +347,14 @@ class ModelTrainer(PatchHanger):
 
                 # pred_probs = np.vstack((pred_probs, pred_prob)) if not self.is_binary else \
                 #         np.hstack((pred_probs, pred_prob))
-        if (self.detailed_test_result):
+        if self.detailed_test_result:
             detailed_output_file.close()
+            if self.slide_level_accuracy:
+                detailed_results = open(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'))
+                slide_level= SlideLevelAccuracy(csv.reader(detailed_results),self.patch_pattern,self.CategoryEnum,self.slide_level_accuracy_threshold,self.slide_level_accuracy_verbose)
+                slide_level.calculate_slide_level_accuracy()
+
+
         print(f"{tag} Results:\n{40 * '*'}")
         self.compute_metric(gt_labels, pred_labels, pred_probs, self.CategoryEnum, verbose=True, is_binary=self.is_binary)
         print(f"{40 * '*'}")
