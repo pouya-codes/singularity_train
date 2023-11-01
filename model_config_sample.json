@@ -18,7 +18,7 @@
       "rotation": false,
       "size_jitter": {
           "use_size_jitter": false,
-          "percentage": 1.2,
+          "ratio": 0.2,
           "probability": 0.7,
           "color": "white"
       },

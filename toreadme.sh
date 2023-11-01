@@ -56,7 +56,7 @@ Model definition and augmentations are defined in the \`config.json\` file. It i
 3.3. \`resize\`: {int} -> if set, add resize of determied size to the augmentation list.
 3.4. \`size_jitter\`:
 3.4.1. \`use_size_jitter\`: {"true","false"} -> if true, add size_jitter to the augmentation list.
-3.4.2. \`percentage\`: {float} -> ratio of the original image size
+3.4.2. \`ratio\`: {float} -> ratio of the original image size
 3.4.3. \`probability\`: {float} -> probability of doing this augmentation
 3.4.4. \`color\`: {"white","black"} -> the color of padding when use ratio less than 1.
 3.5. \`cut_out\`:
