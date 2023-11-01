@@ -7,7 +7,7 @@ import csv
 
 import yaml, random
 from submodule_utils.accuracy.slide_level_accuracy import SlideLevelAccuracy
-from submodule_utils.submodule_utils.metadata.heatmaps import generate_heatmaps
+from submodule_utils.metadata.heatmaps import generate_heatmaps
 from tqdm import tqdm
 from pynvml import *
 import numpy as np
