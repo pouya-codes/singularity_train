@@ -165,7 +165,6 @@ class ModelTrainer(PatchHanger):
                         self.gradcam_dir_location = config.gradcam_dir_location
                         self.slides_location = config.slides_location
                         self.gradcam_h5 = config.gradcam_h5
-                        # self.patches_location = config.patches_location
                         
 
                 self.best_model_state_dict = None
@@ -414,17 +413,6 @@ class ModelTrainer(PatchHanger):
                                 generate_heatmaps(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'),
                                                                   self.patch_pattern, self.CategoryEnum, self.slides_location,
                                                                   self.heatmaps_dir_location)
-                        """
-                        # if (self.gradcam):
-                        #         model_name = vars(model)['model']
-                        #         layer = vars(vars(model)['model'])['_modules']['feature_extract'][-1][-1]
-                        #         layer = [layer]
-                        #         gradcam(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'),
-                        #         self.patch_pattern, 
-                        #         self.CategoryEnum, self.slides_location, 
-                        #         self.patches_location, 
-                        #         self.gradcam_dir_location,model_name,layer)
-                        """
                 
                 if (self.gradcam_h5):
                         self.gradcam_instance.save_gradcam_h5()
