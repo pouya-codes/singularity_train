@@ -1,14 +1,8 @@
-# Train
+# Singularity Train - a python module to train deep learning models on histopathology data
 
 ### Development Information ###
 
 ```
-Date Created: 22 July 2020
-Last Update: 15 July 2021 by Pouya
-Developer: Colin Chen
-Version: 1.0
-```
-
 **Before running any experiment to be sure you are using the latest commits of all modules run the following script:**
 ```
 (cd /projects/ovcare/classification/singularity_modules ; ./update_modules.sh --bcgsc-pass your/bcgsc/path)
@@ -406,7 +400,11 @@ Model definition and augmentations are defined in the `config.json` file. It is 
 3.4.1. `use_size_jitter`: {true,false} -> if true, add size_jitter to the augmentation list.
 3.4.2. `ratio`: {float} -> ratio of the original image size
 3.4.3. `probability`: {float} -> probability of doing this augmentation
+<<<<<<< HEAD
 3.4.4. `color`: {white,black} -> the color of padding when use ratio less than 1.
+=======
+3.4.4. `color`: {white,black} -> the color of padding when the image is resized smaller
+>>>>>>> refs/rewritten/Added-Gradcam
 3.4.5. `dynamic_bool`: {true, false} -> if true, choose a random value between size*(1-ratio) and size*(1+ratio) inclusive to resize the image. If false, only choose either size*(1-ratio) or size*(1+ratio) for resizing. Default false.
 3.5. `cut_out`:
 3.5.1. `use_num_cut`: {true,false} -> if true, add num_cut to the augmentation list.
