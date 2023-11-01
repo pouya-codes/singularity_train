@@ -1,31 +1,38 @@
 try_me:
-    experiment_name: tumor_grade_x5_256_vgg19_without_normalization_1
-    train_model: true
+    experiment_name: TMA_EC_4_subtypes_3_groups_512_20x_patch_overlap_0.8_annotation_overlap_0.5.1_3_train_2_eval_vgg19bn_CEloss_Simple
     batch_size: 32
-    validation_interval: 50
-    epochs: 1
+    validation_interval: -1
+    epochs: 5
+    patch_pattern: annotation/subtype/slide/patch_size/magnification
+    chunk_file_location: /projects/ovcare/classification/amirali/ML/TMA/OneStage/SubType/03_Create_Cross_Validation_Groups/TMA_EC_4_subtypes_3_groups_512_20x_patch_overlap_0.8_annotation_overlap_0.5.1_3_train_2_eval.json
+    log_dir_location: /projects/ovcare/classification/amirali/ML/TMA/OneStage/SubType/04_Train/logs/train
+    model_dir_location: /projects/ovcare/classification/amirali/ML/TMA/OneStage/SubType/04_Train/model
+    model_config_location: /projects/ovcare/classification/amirali/ML/TMA/OneStage/SubType/04_Train/model/config.json
+    train_model: True
+    # scheduler_step: batch
     subtypes:
-      - G1=0
-      - G2=1
-      - G3=2
-    patch_pattern: subtype/slide
-    chunk_file_location: /home/poahmadvand/share/Sub_Types/03_Create_Cross_Validation_Groups/tumor_grade_x5_256/split.1_2_train_3_eval.json
-    log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/logs/train
-    model_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/weights
-    model_config_location: /home/poahmadvand/share/Sub_Types/04_Train_Model/model_config/vgg19_3c_bn__n2__adam__lr_0_0002.json
-    number_of_gpus: 4
-    num_patch_workers: 3
-    writer_log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/logs/train/tensorboard
+        - MMRD=0
+        - P53ABN=1
+        - P53WT=2
+        - POLE=3
+    training_shuffle:
+    num_patch_workers: 4
+    # progressive_resizing: [62, 128, 512]
+    number_of_gpus: 1
+    freeze_training:
+        use_freeze_training: False
+        freeze_epochs: 1
+        unfreeze_epochs: 4
+        base_lr: 0.00006
+        lr_mult: 1
+        # use_scheduler:
     early_stopping:
-      use_early_stopping: True
-      patience: 7
-      delta: 0
+        use_early_stopping: False
+        patience: 7
+        delta: 0
     test_model:
-      testing_model: True
-      test_model_file_location: /path/to/model.pth
-      test_log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/logs/test
-      detailed_test_result:
-    slide_level_accuracy:
-      calculate_slide_level_accuracy: True
-      slide_level_accuracy_threshold: 0.2
-      slide_level_accuracy_verbose: True
+        testing_model: True
+        # test_model_file_location: /projects/ovcare/classification/amirali/ML/TMA/OneStage/SubType/04_Train/model/TMA_EC_2_subtypes_p53abn_p53wt_3_groups_512_10x_patch_overlap_0.8_annotation_overlap_0.5_1_3_train_2_eval_efficientnet_b0_CEloss_lr00002_20210312-003750.pth
+        test_log_dir_location: /projects/ovcare/classification/amirali/ML/TMA/OneStage/SubType/04_Train/logs/test
+        detailed_test_result: ~
+        calculate_slide_level_accuracy:

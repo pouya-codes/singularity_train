@@ -28,3 +28,8 @@ python app.py from-arguments freeze_training -h >> README.md
 echo >> README.md
 echo """\`\`\`
 """ >> README.md
+
+echo """
+Note: \`freeze_training\` subparser MUST be used in your manifest. Due to more readability, the parser is
+defined in this way (having multiple subparserss instead of just one). 
+""" >> README.md

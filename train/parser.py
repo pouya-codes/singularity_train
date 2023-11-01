@@ -100,16 +100,16 @@ def create_parser(parser):
                 help="Experiment name used to name log, model outputs.")
 
         parser.add_argument("--train_model", type=str2bool, nargs='?',
-                        const=True, default=True,
-                help="Train the model or just test the model"
-                "Default uses False")
+                const=True, default=True,
+                help="Train the model or just test the model")
 
         parser.add_argument("--batch_size", type=int, required=True,
                 help="Batch size is the number of patches to put in a batch. "
                 "This flag sets the batch size to use on training, validation and test datasets.")
 
         parser.add_argument("--validation_interval", type=int, required=True,
-                help="The interval of the training loop to start validating model.")
+                help="The interval of the training loop to start validating model."
+                " For validation only once in each epoch, set this value to -1.")
 
         parser.add_argument("--epochs", type=int, required=True,
                 help="The number of epochs to run model training on training dataset.")

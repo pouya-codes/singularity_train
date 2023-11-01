@@ -151,7 +151,7 @@ optional arguments:
                          (default: None)
 
   --train_model [TRAIN_MODEL]
-                        Train the model or just test the modelDefault uses False
+                        Train the model or just test the model
                          (default: True)
 
   --batch_size BATCH_SIZE
@@ -159,7 +159,7 @@ optional arguments:
                          (default: None)
 
   --validation_interval VALIDATION_INTERVAL
-                        The interval of the training loop to start validating model.
+                        The interval of the training loop to start validating model. For validation only once in each epoch, set this value to -1.
                          (default: None)
 
   --epochs EPOCHS       The number of epochs to run model training on training dataset.
@@ -340,4 +340,8 @@ Testing:
                          (default: False)
 
 ```
+
+
+Note: `freeze_training` subparser MUST be used in your manifest. Due to more readability, the parser is
+defined in this way (having multiple subparserss instead of just one). 
 
