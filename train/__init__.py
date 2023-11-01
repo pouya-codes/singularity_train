@@ -340,7 +340,7 @@ class ModelTrainer(PatchHanger):
 
     def test(self, model, test_loader):
         if (self.detailed_test_result) :
-            detailed_output_file = open(os.path.join(self.log_dir_location, f'details_{self.instance_name}.csv'), 'w')
+            detailed_output_file = open(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'), 'w')
             detailed_output_writer = csv.writer(detailed_output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             detailed_output_writer.writerow(["path", "predicted_label", "target_label", "probability"])
 

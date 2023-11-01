@@ -184,6 +184,5 @@ def create_parser(parser):
 def get_args():
         parser = create_parser()
         args = parser.get_args()
-        print(args.detailed_test_result)
         return args
 
