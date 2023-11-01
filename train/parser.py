@@ -4,7 +4,7 @@ from submodule_utils.manifest.arguments import manifest_arguments
 from submodule_utils import (BALANCE_PATCHES_OPTIONS, DATASET_ORIGINS,
         PATCH_PATTERN_WORDS)
 from submodule_utils.arguments import (
-        dir_path, file_path, dataset_origin, balance_patches_options,
+        dir_path, str2bool, file_path, dataset_origin, balance_patches_options,
         str_kv, int_kv, subtype_kv, make_dict,
         ParseKVToDictAction, CustomHelpFormatter)
 
@@ -137,7 +137,7 @@ def create_parser(parser):
         parser.add_argument("--validation_shuffle", action='store_true',
                 help="Shuffle the validation set.")
 
-        parser.add_argument("--writer_log_dir_location", type=str, required=False,
+        parser.add_argument("--writer_log_dir_location", type=dir_path, required=False,
                 help="Directory in log_dir_location to put TensorBoard logs."
                 "Default uses log_dir_location/experiment_name.")
 
@@ -147,8 +147,9 @@ def create_parser(parser):
 
         subparser_parameters = subparsers.add_parser("early_stopping")
 
-        subparser_parameters.add_argument("--use_early_stopping", type=bool, default=False, required=False,
-                help="Weather or not use EarlyStopping"
+        subparser_parameters.add_argument("--use_early_stopping", type=str2bool, nargs='?',
+                        const=True, default=False, required=False,
+                help="Uses EarlyStopping"
                 "Default uses False")
         subparser_parameters.add_argument("--patience", type=int, default=7, required=False,
                 help="How long to wait after last time validation loss improved."
@@ -159,18 +160,19 @@ def create_parser(parser):
 
         subparsers.add_parser("test_model")
 
-        subparser_parameters.add_argument("--testing_model", type=bool, default=True, required=True,
+        subparser_parameters.add_argument("--testing_model", type=str2bool, nargs='?',
+                        const=True, default=False, required=False,
                 help="Test the model performance after training"
                 "Default uses False")
 
-        subparser_parameters.add_argument("--test_log_dir_location", type=str, required=True,
+        subparser_parameters.add_argument("--test_log_dir_location", type=dir_path, required=True,
                 help="Location of results of the testing")
 
-        subparser_parameters.add_argument("--detailed_test_result", type=bool, default=False, required=False,
+        subparser_parameters.add_argument("--detailed_test_result", action='store_true',
                 help="Provides deatailed test results, including paths to image files, predicted label, target label, probabilities of classes"
                 "Default uses False")
 
-        subparser_parameters.add_argument("--testing_shuffle", type=bool, default=False,
+        subparser_parameters.add_argument("--testing_shuffle", action='store_true',
                             help="Shuffle the testing set."
                                  "Default uses False")
 
@@ -182,5 +184,6 @@ def create_parser(parser):
 def get_args():
         parser = create_parser()
         args = parser.get_args()
+        print(args.detailed_test_result)
         return args
 
