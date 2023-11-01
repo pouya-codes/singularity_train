@@ -121,7 +121,8 @@ class ModelTrainer(object):
         self.training_chunks = training_chunks
         self.validation_chunks = validation_chunks
         self.is_binary = is_binary
-        self.subtypes = self.create_category_enum(self.is_binary, subtypes)
+        self.CategoryEnum = self.create_category_enum(
+                self.is_binary, subtypes)
         self.patch_pattern = self.create_patch_pattern(patch_pattern)
         self.chunk_file_location = chunk_file_location
         self.log_dir_location = log_dir_location
