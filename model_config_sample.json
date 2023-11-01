@@ -39,5 +39,14 @@
             "amsgrad" : true,
             "weight_decay" : 0.0005
         }
+    },
+    "scheduler" : {
+        "type" : "OneCycleLR",
+        "parameters" : {
+            "max_lr" : 0.01,
+            "steps_per_epoch" : 1202,
+            "epochs" : 10,
+            "three_phase": true
+        }
     }
 }

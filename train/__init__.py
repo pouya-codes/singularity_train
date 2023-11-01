@@ -166,11 +166,15 @@ class ModelTrainer(PatchHanger):
         self.model_file_location = os.path.join(self.model_dir_location,
                 f'{self.instance_name}.pth')
         self.config = config
+
         #########
         # Amirali
         self.class_weight = self.model_config["use_weighted_loss"]["weight"] if \
             self.model_config["use_weighted_loss"]["use_weighted_loss"] else None
         self.MixUp = True if 'mix_up' in self.model_config and self.model_config['mix_up']['mix_up'] else False
+        self.scheduler_step = config.scheduler_step
+        if "scheduler" in self.model_config and self.scheduler_step is not None:
+            self.scheduler = True
 
     def print_parameters(self):
         parameters = self.config.__dict__.copy()
@@ -409,6 +413,8 @@ class ModelTrainer(PatchHanger):
                                               batch_labels_mixed, lam)
                 else:
                     model.optimize_parameters(logits, batch_labels, output)
+                if self.scheduler and self.scheduler_step.upper()=="BATCH":
+                    model.scheduler_step()
                 intv_loss += model.get_current_errors()
                 pred_labels += torch.argmax(probs,
                         dim=1).cpu().numpy().tolist()
@@ -459,7 +465,8 @@ class ModelTrainer(PatchHanger):
                             self.writer.close()
                             return
                 self.writer.flush()
-
+            if self.scheduler and self.scheduler_step.upper()=="EPOCH":
+                model.scheduler_step()
             print(f'\nEpoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
             print(f'Peak accuracy at iteration: {max_val_acc_idx}')

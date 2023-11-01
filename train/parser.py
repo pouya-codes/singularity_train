@@ -157,7 +157,8 @@ def create_parser(parser):
                 help="Directory in log_dir_location to put TensorBoard logs."
                 "Default uses log_dir_location/experiment_name.")
 
-
+        parser.add_argument("--scheduler_step", type=str, required=False,
+                help="When the step should be called either {batch or epochs}")
 
         subparsers = parser.add_subparsers(dest="subparser", required=False)
 
