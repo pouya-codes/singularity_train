@@ -8,7 +8,7 @@
 
 ```
 Date Created: 22 July 2020
-Last Update: Fri Mar  5 16:37:09 PST 2021 by pouya
+Last Update: Tue Apr 6 16:37:09 PST 2021 by Amirali
 Developer: Colin Chen
 Version: 1.0
 ```
@@ -27,7 +27,7 @@ To build singularity image
 To run the container afterwards
 
 ```
- run --nv singularity_train.sif from-experiment-manifest path/to/manifest/file/location 
+ run --nv singularity_train.sif from-experiment-manifest path/to/manifest/file/location
 ```
 
 Here's an example of the setup you can use:
@@ -55,26 +55,45 @@ Trains a model for patch classification. This process does the training in the f
 
  (2) The flag --model_config_location specifies a path to a JSON file containing model hyperparameters. It is a residue of an old config format that didn't have a time to get refactored. For most of the experiments at AIM Lab, we currently use the below config JSON. The primary change is to set the num_subtypes
 
-{
-    "num_subtypes" : <number>,
-    "deep_model" : "vgg19_bn",
-    "use_weighted_loss" : false,
+    "num_subtypes" : 2,
+    "deep_model" : "efficientnet-b0",
     "continue_train" : false,
-        "normalize" : {
-        "normalize" : false,
-        "mean" : [ 0.485, 0.456, 0.406 ],
-        "std" : [ 0.229, 0.224, 0.225 ]
+    "normalize" : {
+        "normalize" : true,
+        "mean" : [ 0.8731, 0.8085, 0.9004 ],
+        "std" : [ 0.1539, 0.2028, 0.1125 ]
     },
-    "augmentation" : true,
+    "augmentation" : {
+        "augmentation": true,
+        "flip": true,
+        "color_jitter": true,
+        "rotation": true,
+        "cut_out": {
+            "num_cut": 2,
+            "size_cut": 50,
+            "color_cut": "black"
+        }
+    },
+    "use_weighted_loss" : {
+        "use_weighted_loss" : false,
+        "weight": [0.123, 1.877]
+    },
+    "use_weighted_sampler" : false,
+    "use_balanced_sampler" : true,
+    "mix_up" : {
+        "mix_up" : false,
+        "alpha": 0.4
+    },
+    "freeze": -1,
     "parameters" : {
         "pretrained" : true
     },
     "optimizer" : {
         "type" : "Adam",
         "parameters" : {
-            "lr" : 0.00001,
+            "lr" : 0.00003,
             "amsgrad" : true,
-            "weight_decay" : 0.0005
+            "weight_decay" : 0.0001
         }
     }
 }
@@ -120,10 +139,12 @@ usage: app.py from-arguments [-h] --experiment_name EXPERIMENT_NAME
                              [--num_patch_workers NUM_PATCH_WORKERS]
                              [--num_validation_batches NUM_VALIDATION_BATCHES]
                              [--gpu_id GPU_ID]
+                             [--progressive_resizing [PROGRESSIVE_RESIZING ...]]
+                             [--scheduler_step SCHEDULER_STEP]
                              [--number_of_gpus NUMBER_OF_GPUS] [--seed SEED]
                              [--training_shuffle] [--validation_shuffle]
                              [--writer_log_dir_location WRITER_LOG_DIR_LOCATION]
-                             {early_stopping,test_model,slide_level_accuracy}
+                             {freeze_training,early_stopping,test_model,slide_level_accuracy}
                              ...
 
 positional arguments:
@@ -205,6 +226,14 @@ optional arguments:
                         The number of GPUs to use. Default uses a GPU with the most free memory.
                          (default: 1)
 
+  --progressive_resizing [PROGRESSIVE_RESIZING ...]
+                        One of the techniques that enables the model to be trained on different input sizes. The inputs are resized to the selected value and trained on them in order of the size. For example, [32, 256, 512] means that the model will be trained first on 32, then 256, and at last on 512.
+                         (default: None)
+
+  --scheduler_step SCHEDULER_STEP
+                        If a scheduler is defined in the config file, it enables the step for that. It should be 'epoch' or 'batch'. It depends on the scheduler, for example OneCycleLR needs to be stepped in batch.
+                         (default: None)
+
   --seed SEED           Seed for random shuffle.
                          (default: 256)
 
@@ -217,6 +246,43 @@ optional arguments:
   --writer_log_dir_location WRITER_LOG_DIR_LOCATION
                         Directory in log_dir_location to put TensorBoard logs.Default uses log_dir_location/experiment_name.
                          (default: None)
+
+usage: app.py from-arguments freeze_training [-h]
+                                            [--use_freeze_training [USE_FREEZE_TRAINING]]
+                                            [--freeze_epochs FREEZE_EPOCHS]
+                                            [--unfreeze_epochs UNFREEZE_EPOCHS]
+                                            [--base_lr BASE_LR]
+                                            [--lr_mult LR_MULT]
+                                            [--use_scheduler [USE_SCHEDULER]]
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+  --use_freeze_training [USE_FREEZE_TRAINING]
+                        Uses Freeze Training. Models are divided into two parts: 1.feature_extraction 2.classifier
+                        Freeze Training means that train the second part (classsifier) for some epochs, and then train the whole model toghether.
+                         (default: False)
+
+  --freeze_epochs FREEZE_EPOCHS   
+                        Number of epochs the classifier part (+batch_normalization from feature_extraction) should be trained.
+                         (default: 1)
+
+  --unfreeze_epochs UNFREEZE_EPOCHS
+                        Number of epochs the whole model should be trained.
+                         (default: 5)
+
+  --base_lr BASE_LR     Base learning rate. In freeze part, the classifier learning part will be base_lr, and the feature_extraction will be base_lr/10.
+                         (default: 2e-3)
+  --lr_mult LR_MULT     In unfreeze part, the classifier learning part will be base_lr/2, and the feature_extraction will be base_lr/(2*lr_mult).
+                         (default: 100)
+
+  --use_scheduler [USE_SCHEDULER]
+                        Using scheduler. If any scheduler is defined in the config file, it will use that. Otherwise, the model will use OneCycleLR.
+                         (default: False)
+
+
+  --testing_model [TESTING_MODEL]
+                        Test the model performance after trai
 
 usage: app.py from-arguments early_stopping [-h]
                                             [--use_early_stopping [USE_EARLY_STOPPING]]
@@ -287,4 +353,3 @@ optional arguments:
   -h, --help  show this help message and exit
 
 ```
-
