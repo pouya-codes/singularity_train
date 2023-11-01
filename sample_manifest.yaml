@@ -1,22 +1,22 @@
 try_me:
-    experiment_name: local_test
+    experiment_name: tumor_grade_x5_256_vgg19_without_normalization_1
     batch_size: 32
     validation_interval: 50
     epochs: 10
     subtypes:
-      - airplane=0
-      - automobile=1
-      - bird=2
-      - cat=3
-      - deer=4
-      - dog=5
-      - frog=6
-      - horse=7
-      - ship=8
-      - truck=9
-    chunk_file_location: /home/pouya/Develop/train_test/dataset/split.1_train_2_3_eval.json
-    log_dir_location: /home/pouya/Develop/train_test/dataset/logs/train
-    model_dir_location: /home/pouya/Develop/train_test/dataset/weights
-    model_config_location: /home/pouya/Develop/train_test/dataset/vgg19_10c_bn__n2__adam__lr_0_0002.json
-    patch_location: /home/pouya/Develop/train_test/dataset/train
+      - G1=0
+      - G2=1
+      - G3=2
+    chunk_file_location: /home/poahmadvand/share/Sub_Types/03_Create_Cross_Validation_Groups/tumor_grade_x5_256/split.1_2_train_3_eval.json
+    log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/logs/train
+    model_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/weights
+    model_config_location: /home/poahmadvand/share/Sub_Types/04_Train_Model/model_config/vgg19_3c_bn__n2__adam__lr_0_0002.json
+    patch_location: /projects/ovcare/classification/Diagnostic_TCGA_PDAC_cases/subtypes/X5_512/tumor_grade
     num_patch_workers: 3
+    early_stopping:
+      use_early_stopping: True
+      patience: 7
+      delta: 0
+      testing_model: True
+      test_log_dir_location: /home/pouya/Develop/train_test/dataset/logs/test
+      detailed_test_result: True

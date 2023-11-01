@@ -5,3 +5,4 @@ __pycache__/
 .vscode
 .pytest_cache
 .idea
+sample_manifest_local_test.yaml

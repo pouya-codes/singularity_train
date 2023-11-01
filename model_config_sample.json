@@ -1,6 +1,6 @@
 {
     "num_subtypes" : 10,
-    "deep_model" : "vgg16_bn",
+    "deep_model" : "efficientnet-b0",
     "use_weighted_loss" : false,
     "continue_train" : false,
     "parameters" : {

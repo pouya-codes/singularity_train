@@ -3,6 +3,7 @@ import json
 import time
 import sys
 import enum
+import csv
 
 import yaml
 from tqdm import tqdm
@@ -11,12 +12,17 @@ import numpy as np
 import torch
 import torchvision
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import cohen_kappa_score
+from sklearn.metrics import classification_report
+from sklearn.metrics import f1_score
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import confusion_matrix
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import submodule_utils as utils
 from submodule_cv import (ChunkLookupException, setup_log_file,
-    gpu_selector, PatchHanger)
+    gpu_selector, PatchHanger, EarlyStopping)
 
 # Folder permission mode
 p_mode = 0o777
@@ -36,7 +42,7 @@ class ModelTrainer(PatchHanger):
     experiment_name : str
         Experiment name
     
-    train_instance_name : str
+    instance_name : str
         Generated instance name based on experiment name
 
     batch_size : int
@@ -109,7 +115,7 @@ class ModelTrainer(PatchHanger):
         """
         self.experiment_name = config.experiment_name
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        self.train_instance_name = f'{self.experiment_name}_{timestamp}'
+        self.instance_name = f'{self.experiment_name}_{timestamp}'
         # hyperparameters
         self.batch_size = config.batch_size
         self.validation_interval = config.validation_interval
@@ -135,6 +141,22 @@ class ModelTrainer(PatchHanger):
         self.training_shuffle = config.training_shuffle
         self.validation_shuffle = config.validation_shuffle
 
+        # early stopping parameters
+        self.early_stopping = not isinstance(config.subparser, type(None)) and  "early_stopping" in config.subparser and config.use_early_stopping
+        if self.early_stopping:
+            self.patience = config.patience
+            self.delta = config.delta
+
+        # testing model parameters
+        self.testing_model = config.testing_model
+        self.test_log_dir_location = config.test_log_dir_location
+        self.detailed_test_result = config.detailed_test_result
+        self.testing_shuffle = config.testing_shuffle
+        self.test_chunks = config.test_chunks
+
+        self.best_model_state_dict = None
+
+
         if config.writer_log_dir_location:
             self.writer_log_dir_location = config.writer_log_dir_location
         else:
@@ -148,7 +170,7 @@ class ModelTrainer(PatchHanger):
         self.raw_patch_pattern = config.patch_pattern
         # model_file_location
         self.model_file_location = os.path.join(self.model_dir_location,
-                f'{self.train_instance_name}.pth')
+                f'{self.instance_name}.pth')
 
     @classmethod
     def from_config_file(cls, config_file_location):
@@ -185,7 +207,7 @@ class ModelTrainer(PatchHanger):
             'training_shuffle': self.training_shuffle,
             'validation_shuffle': self.validation_shuffle,
             # Generated values
-            'instance_name': self.train_instance_name,
+            'instance_name': self.instance_name,
             'model_file_location': self.model_file_location,
             'writer_log_dir_location': self.writer_log_dir_location
         })
@@ -227,8 +249,142 @@ class ModelTrainer(PatchHanger):
                         dim=1).cpu().numpy().tolist()
                 gt_labels += cur_label.cpu().numpy().tolist()
                 val_idx += 1
+
         model.model.train()
         return accuracy_score(gt_labels, pred_labels), (val_loss / val_idx)
+
+    def compute_metric(self, labels, preds, probs, CategoryEnum, verbose=True, is_binary=False):
+        """Function to compute the various metrics given predicted labels and ground truth labels
+
+        Parameters
+        ----------
+        labels : numpy array
+            A row contains the ground truth labels
+        preds: numpy array
+            A row contains the predicted labels
+        probs: numpy array
+            A matrix and each row is the probability for the predicted patches or slides
+        verbose : bool
+            Print detail of the computed metrics
+
+        Returns
+        -------
+        overall_acc : float
+            Accuracy
+        overall_kappa : float
+            Cohen's kappa
+        overall_f1 : float
+            F1 score
+        overall_auc : float
+            ROC AUC
+        """
+        print('\nComputing Metric:')
+        overall_acc = accuracy_score(labels, preds)
+        overall_kappa = cohen_kappa_score(labels, preds)
+        overall_f1 = f1_score(labels, preds, average='macro')
+        conf_mat = confusion_matrix(labels, preds).T
+        acc_per_subtype = conf_mat.diagonal() / conf_mat.sum(axis=0) * 100
+        acc_per_subtype[np.isinf(acc_per_subtype)] = 0.00
+        if not is_binary and len(CategoryEnum) > 2:
+            try:
+                overall_auc = roc_auc_score(
+                    labels, probs, multi_class='ovo', average='macro')
+            except ValueError as e:
+                print('Warning:', e)
+                overall_auc = 0.00
+        else:
+            overall_auc = roc_auc_score(labels, preds, average='macro')
+        # disply results
+        if verbose:
+            print('Acc: {:.2f}\%'.format(overall_acc * 100))
+            print('Kappa: {:.4f}'.format(overall_kappa))
+            print('F1: {:.4f}'.format(overall_f1))
+            print('AUC ROC: {:.4f}'.format(overall_auc))
+            print('Confusion Matrix')
+            if is_binary:
+                print('||X||Actual Non-tumor||Actual Tumor||')
+                print('|Predicted Non-tumor|{}|{}|'.format(conf_mat[0][0], conf_mat[0][1]))
+                print('|Predicted Tumor|{}|{}|'.format(conf_mat[1][0], conf_mat[1][1]))
+            else:
+                output = '||X||'
+                for s in CategoryEnum:
+                    output += f'Actual {s.name}||'
+                output += '\n'
+                for i, s1 in enumerate(CategoryEnum):
+                    output += f'|Predicted {s1.name}|'
+                    for s2 in CategoryEnum:
+                        output += f'{conf_mat[s1.value][s2.value]}|'
+                    if i != len(CategoryEnum):
+                        output += '\n'
+                print(output)
+            print(repr(conf_mat))
+            # latex format
+            if is_binary:
+                print(
+                    '||Dataset||Non-tumor Accuracy||Tumor Accuracy||Weighted Accuracy||Kappa||F1 Score||AUC||Average Accuracy||')
+                print('|X|{:.2f}%|{:.2f}%|{:.2f}%|{:.4f}|{:.4f}|{:.4f}|{:.2f}%|'.format(
+                    acc_per_subtype[0], acc_per_subtype[1], overall_acc * 100, overall_kappa, overall_f1, overall_auc,
+                    acc_per_subtype.mean()))
+            else:
+                output = '||Dataset||'
+                for s in CategoryEnum:
+                    output += f'{s.name} Accuracy||'
+                output += 'Weighted Accuracy||Kappa||F1 Score||AUC||Average Accuracy||\n|X|'
+                for s in CategoryEnum:
+                    output += '{:.2f}%|'.format(acc_per_subtype[s.value])
+                output += '{:.2f}%|{:.4f}|{:.4f}|{:.4f}|{:.2f}%|'.format(overall_acc * 100, overall_kappa, overall_f1,
+                                                                         overall_auc, acc_per_subtype.mean())
+                print(output)
+
+        return overall_acc, overall_kappa, overall_f1, overall_auc
+
+    def test(self, model, test_loader):
+        if (self.detailed_test_result) :
+            detailed_output_file = open(os.path.join(self.log_dir_location, f'details_{self.instance_name}.csv'), 'w')
+            detailed_output_writer = csv.writer(detailed_output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            detailed_output_writer.writerow(["path", "predicted_label", "target_label", "probability"])
+
+
+        pred_labels = []
+        gt_labels = []
+        #pred_probs = np.array([]).reshape(
+        #        0, len(self.CategoryEnum)) if not self.is_binary else np.array([])
+        pred_probs = np.array([]).reshape(
+                0, len(self.CategoryEnum))
+
+        model.model.eval()
+        with torch.no_grad():
+            prefix = 'Testing: '
+            for data in tqdm(test_loader, desc=prefix,
+                    dynamic_ncols=True, leave=True, position=0):
+                cur_data, cur_label, cur_path = data
+                cur_data = cur_data.cuda()
+                cur_label = cur_label.cuda()
+                _, pred_prob, _ = model.forward(cur_data)
+                # if self.is_binary:
+                #     pred_labels += (pred_prob >=
+                #             0.5).type(torch.int).cpu().numpy().tolist()
+                # else:
+                pred_label = torch.argmax(pred_prob,
+                        dim=1).cpu().numpy().tolist()
+                pred_labels += pred_label
+
+                gt_label = cur_label.cpu().numpy().tolist()
+                gt_labels += gt_label
+
+                pred_prob = pred_prob.cpu().numpy()
+                pred_probs = np.vstack((pred_probs, pred_prob))
+
+                if (self.detailed_test_result):
+                    for path_, pred_label_, true_label_, pred_prob_ in zip(cur_path, pred_label ,gt_label ,pred_probs) :
+                        detailed_output_writer.writerow([path_, pred_label_, true_label_, pred_prob_])
+                    # print(f"{path_} Predicted:{pred_label_} True:{true_label_} Probability:{pred_prob_}")
+
+                # pred_probs = np.vstack((pred_probs, pred_prob)) if not self.is_binary else \
+                #         np.hstack((pred_probs, pred_prob))
+        if (self.detailed_test_result):
+            detailed_output_file.close()
+        return self.compute_metric(gt_labels, pred_labels, pred_probs, self.CategoryEnum, verbose=True, is_binary=self.is_binary)
 
     def train(self, model, training_loader, validation_loader):
         """Runs the training loop
@@ -250,6 +406,14 @@ class ModelTrainer(PatchHanger):
         intv_loss = 0
         pred_labels = []
         gt_labels = []
+
+        # initialize the early_stopping object
+        if(self.early_stopping):
+            early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
+
+        ###################
+        # train the model #
+        ###################
         for epoch in range(self.epochs):
             prefix = f'Training Epoch {epoch}: '
             for data in tqdm(training_loader, desc=prefix, 
@@ -267,12 +431,12 @@ class ModelTrainer(PatchHanger):
                 if iter_idx % self.validation_interval == 0:
 
                     val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
-                    self.writer.add_scalars(f"{self.train_instance_name}/loss",
+                    self.writer.add_scalars(f"{self.instance_name}/loss",
                             {
                                 'validation': val_loss,
                                 'test': intv_loss / self.validation_interval
                             }, iter_idx)
-                    self.writer.add_scalars(f"{self.train_instance_name}/accuracy",
+                    self.writer.add_scalars(f"{self.instance_name}/accuracy",
                             {
                                 'validation': val_acc,
                                 'test': accuracy_score(gt_labels, pred_labels)
@@ -284,8 +448,16 @@ class ModelTrainer(PatchHanger):
                         max_val_acc = val_acc
                         max_val_acc_idx = iter_idx
                         model.save_state(self.model_dir_location,
-                                self.train_instance_name,
+                                self.instance_name,
                                 iter_idx, epoch)
+                        # store best state of model for testing
+                        self.best_model_state_dict = model.model.state_dict()
+                    if (self.early_stopping):
+                        early_stopping(val_loss, model.model)
+                        if early_stopping.early_stop:
+                            print("Early stopping")
+                            break
+
                 self.writer.flush()
             print(f'\nEpoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
@@ -299,11 +471,17 @@ class ModelTrainer(PatchHanger):
 
 
     def run(self):
-        setup_log_file(self.log_dir_location, self.train_instance_name)
+        setup_log_file(self.log_dir_location, self.instance_name)
         self.print_parameters()
-        print(f'Instance name: {self.train_instance_name}')
+        print(f'Instance name: {self.instance_name}')
         gpu_selector(self.gpu_id)
         training_loader = self.create_data_loader(self.training_chunks, color_jitter=True, shuffle=self.training_shuffle)
         validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
         model = self.build_model()
         self.train(model, training_loader, validation_loader)
+        if (self.testing_model) :
+            setup_log_file(self.test_log_dir_location, self.instance_name)
+            test_loader = self.create_data_loader(self.test_chunks,
+                                                  color_jitter=False, shuffle=self.testing_shuffle)
+            model.model.load_state_dict(self.best_model_state_dict)
+            overall_acc, overall_kappa, overall_f1, overall_auc = self.test(model, test_loader)
