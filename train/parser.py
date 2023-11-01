@@ -298,6 +298,15 @@ def create_parser(parser):
                 const=True, default=False,
                 help="Verbose the detail for slide level accuracy")
 
+        test_parameters.add_argument("--generate_heatmaps", action='store_true',
+                help="Generate the overlay heatmaps that can be used to visualize the results on cPathPortal")
+
+        test_parameters.add_argument("--heatmaps_dir_location", type=dir_path, required=False,
+                help="Location of generated heatmaps files")
+
+        test_parameters.add_argument("--slides_location", type=dir_path, required=False,
+                help="Path to the slides used to extract and generate data splits")
+
 
 def get_args():
         parser = create_parser()
