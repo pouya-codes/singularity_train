@@ -1,9 +1,9 @@
 Bootstrap: library
-From: debian:9
+From: debian:latest
 %post
     apt-get update && apt-get -y upgrade
     apt-get -y install \
-    build-essential \
+    build-essential openslide-tools \
     wget \
     bzip2 \
     ca-certificates \
@@ -16,9 +16,9 @@ From: debian:9
     apt-get clean
 
     #Installing Anaconda 3
-    wget -c https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh
-    /bin/bash Anaconda3-2020.02-Linux-x86_64.sh -bfp /usr/local
-    rm Anaconda3-2020.02-Linux-x86_64.sh
+    wget -c https://repo.anaconda.com/archive/Anaconda3-2021.04-Linux-x86_64.sh
+    /bin/bash Anaconda3-2021.04-Linux-x86_64.sh -bfp /usr/local
+    rm Anaconda3-2021.04-Linux-x86_64.sh
 
     #Conda configuration of channels from .condarc file
     conda config --file /.condarc --add channels defaults

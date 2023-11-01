@@ -4,7 +4,7 @@ echo """# Train
 
 \`\`\`
 Date Created: 22 July 2020
-Last Update: 1 June 2021 by Amirali
+Last Update: 15 July 2021 by Pouya
 Developer: Colin Chen
 Version: 1.0
 \`\`\`
@@ -18,13 +18,13 @@ Version: 1.0
 \`\`\`
 """ > README.md
 
-python app.py -h >> README.md
+python3 app.py -h >> README.md
 echo >> README.md
-python app.py from-experiment-manifest -h >> README.md
+python3 app.py from-experiment-manifest -h >> README.md
 echo >> README.md
-python app.py from-arguments -h >> README.md
+python3 app.py from-arguments -h >> README.md
 echo >> README.md
-python app.py from-arguments freeze_training -h >> README.md
+python3 app.py from-arguments freeze_training -h >> README.md
 echo >> README.md
 echo """\`\`\`
 """ >> README.md

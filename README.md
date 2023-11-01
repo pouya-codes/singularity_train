@@ -4,7 +4,7 @@
 
 ```
 Date Created: 22 July 2020
-Last Update: 1 June 2021 by Amirali
+Last Update: 15 July 2021 by Pouya
 Developer: Colin Chen
 Version: 1.0
 ```
@@ -265,6 +265,9 @@ usage: app.py from-arguments freeze_training [-h]
                                              [--calculate_slide_level_accuracy [CALCULATE_SLIDE_LEVEL_ACCURACY]]
                                              [--slide_level_accuracy_threshold SLIDE_LEVEL_ACCURACY_THRESHOLD]
                                              [--slide_level_accuracy_verbose [SLIDE_LEVEL_ACCURACY_VERBOSE]]
+                                             [--generate_heatmaps]
+                                             [--heatmaps_dir_location HEATMAPS_DIR_LOCATION]
+                                             [--slides_location SLIDES_LOCATION]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -362,6 +365,17 @@ Testing:
                         Verbose the detail for slide level accuracy
                          (default: False)
 
+  --generate_heatmaps   Generate the overlay heatmaps that can be used to visualize the results on cPathPortal
+                         (default: False)
+
+  --heatmaps_dir_location HEATMAPS_DIR_LOCATION
+                        Location of generated heatmaps files
+                         (default: None)
+
+  --slides_location SLIDES_LOCATION
+                        Path to the slides used to extract and generate data splits
+                         (default: None)
+
 ```
 
 
@@ -392,8 +406,7 @@ Model definition and augmentations are defined in the `config.json` file. It is 
 3.4.1. `use_size_jitter`: {true,false} -> if true, add size_jitter to the augmentation list.
 3.4.2. `ratio`: {float} -> ratio of the original image size
 3.4.3. `probability`: {float} -> probability of doing this augmentation
-3.4.4. `color`: {white,black} -> the color of padding when image is resized smaller.
-3.4.5. `dynamic_bool`: {true,false} -> if true, choose a random value between size*(1-ratio) and size*(1+ratio) inclusive to resize the image. If false, only choose either size*(1-ratio) or size*(1+ratio) for resizing. Default false. 
+3.4.4. `color`: {white,black} -> the color of padding when use ratio less than 1.
 3.5. `cut_out`:
 3.5.1. `use_num_cut`: {true,false} -> if true, add num_cut to the augmentation list.
 3.5.2. `num_cut`: {int} -> number of cutouts
