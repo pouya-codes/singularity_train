@@ -8,7 +8,7 @@
 
 ```
 Date Created: 22 July 2020
-Last Update: Tue Aug 18 15:32:48 PDT 2020 by pouya
+Last Update: Fri Sep 25 12:21:32 PDT 2020 by poahmadvand
 Developer: Colin Chen
 Version: 1.0
 ```
@@ -41,7 +41,7 @@ usage: app.py [-h] {from-experiment-manifest,from-arguments} ...
 
 Trains a model for patch classification. This process does the training in the following manner:
 
- (1) Takes in a JSON file (aka. file of one or more chunks) that is either a split JSON file created by `docker_create_cross_validation_groups`, or a group JSON file created by `docker_create_groups` specified by --chunk_file_location. Each chunk contains patch paths to feed into the classifier. Use --training_chunks to select the chunks to include in your training set, etc. JSON files use Mitch's format for groups i.e. it is a json file with the format
+ (1) Takes in a JSON file (aka. file of one or more chunks) that is either a split JSON file created by `singularity_create_cross_validation_groups`, or a group JSON file created by `singularity_create_groups` specified by --chunk_file_location. Each chunk contains patch paths to feed into the classifier. Use --training_chunks to select the chunks to include in your training set, etc. JSON files use Mitch's format for groups i.e. it is a json file with the format
 
 {
     "chunks": [
@@ -193,9 +193,6 @@ optional arguments:
 
   --gpu_id GPU_ID       The ID of GPU to select. Default uses GPU with the most free memory.
                          (default: None)
-                         
-  --number_of_gpus      The number of GPUs to use. Default uses a GPU with the most free memory.
-                         (default: 1)
 
   --number_of_gpus NUMBER_OF_GPUS
                         The number of GPUs to use. Default uses a GPU with the most free memory.

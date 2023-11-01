@@ -1,3 +1,12 @@
+#!/bin/bash
+#SBATCH --job-name toreadme
+#SBATCH --cpus-per-task 1
+#SBATCH --output /home/poahmadvand/ml/slurm/classification/toreadme/toreadme.%j.out
+#SBATCH --error  /home/poahmadvand/ml/slurm/classification/toreadme/toreadme.%j.out
+#SBATCH -w dlhost04
+#SBATCH -p rtx5000
+#SBATCH --gres=gpu:1
+#SBATCH --time=00:30:00
 
 echo """# Singularity Train
 
