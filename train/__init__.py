@@ -278,7 +278,7 @@ class ModelTrainer(PatchHanger):
         if not is_binary and len(CategoryEnum) > 2:
             try:
                 overall_auc = roc_auc_score(
-                    labels, probs, multi_class='ovo', average='macro')
+                    labels, probs, multi_class='ovr', average='macro')
             except ValueError as e:
                 print('Warning:', e)
                 overall_auc = 0.00
