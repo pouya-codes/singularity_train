@@ -12,6 +12,7 @@ import torch
 import torchvision
 from sklearn.metrics import accuracy_score
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 import submodule_utils as utils
 from submodule_cv import (ChunkLookupException, setup_log_file,
@@ -133,6 +134,12 @@ class ModelTrainer(PatchHanger):
         self.seed = config.seed
         self.training_shuffle = config.training_shuffle
         self.validation_shuffle = config.validation_shuffle
+
+        self.writer_log_dir_location = os.path.join(
+                self.log_dir_location, self.train_instance_name)
+        if not os.path.exists(self.writer_log_dir_location):
+            os.makedirs(self.writer_log_dir_location)
+        self.writer = SummaryWriter(log_dir=self.writer_log_dir_location)
         # raw
         self.raw_subtypes = config.subtypes
         self.raw_patch_pattern = config.patch_pattern
@@ -176,13 +183,14 @@ class ModelTrainer(PatchHanger):
             'validation_shuffle': self.validation_shuffle,
             # Generated values
             'instance_name': self.train_instance_name,
-            'model_file_location': self.model_file_location
+            'model_file_location': self.model_file_location,
+            'writer_log_dir_location': self.writer_log_dir_location
         })
         print('---') # begin YAML
         print(payload)
         print('...') # end YAML
 
-    def validate(self, model, validation_loader):
+    def validate(self, model, validation_loader, iter_idx):
         """Runs the validation loop
 
         Parameters
@@ -193,18 +201,22 @@ class ModelTrainer(PatchHanger):
         validation_loader : torch.DataLoader
             Loader for validation set.
         """
+        val_idx = 0
+        val_loss = 0
         pred_labels = []
         gt_labels = []
         model.model.eval()
         with torch.no_grad():
-            for val_idx, data in enumerate(validation_loader):
+            for data in validation_loader:
                 if self.num_validation_batches is not None \
                         and val_idx >= self.num_validation_batches:
                     break
                 cur_data, cur_label = data
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
-                _, pred_prob, _ = model.forward(cur_data)
+                logits, pred_prob, output = model.forward(cur_data)
+                model.optimize_parameters(logits, cur_label, output)
+                val_loss += model.get_current_errors()
                 # if self.is_binary:
                 #     pred_labels += (pred_prob >=
                 #             0.5).type(torch.int).cpu().numpy().tolist()
@@ -212,10 +224,13 @@ class ModelTrainer(PatchHanger):
                 pred_labels += torch.argmax(pred_prob,
                         dim=1).cpu().numpy().tolist()
                 gt_labels += cur_label.cpu().numpy().tolist()
+                val_idx += 1
         model.model.train()
+        self.writer.add_scalar('Validation Loss',
+                val_loss / val_idx, global_step=iter_idx)
         return accuracy_score(gt_labels, pred_labels)
 
-    def train(self, model, training_loader, validation_loader):
+    def train(self, model, training_loader, validation_loader, writer):
         """Runs the training loop
 
         Parameters
@@ -232,6 +247,9 @@ class ModelTrainer(PatchHanger):
         iter_idx = -1
         max_val_acc = float('-inf')
         max_val_acc_idx = -1
+        intv_loss = 0
+        pred_labels = []
+        gt_labels = []
         for epoch in range(self.epochs):
             prefix = f'Training Epoch {epoch}: '
             for data in tqdm(training_loader, desc=prefix, 
@@ -242,17 +260,32 @@ class ModelTrainer(PatchHanger):
                 batch_labels = batch_labels.cuda()
                 logits, probs, output = model.forward(batch_data)
                 model.optimize_parameters(logits, batch_labels, output)
+                intv_loss += model.get_current_errors()
+                pred_labels += torch.argmax(probs,
+                        dim=1).cpu().numpy().tolist()
+                gt_labels += batch_labels.cpu().numpy().tolist()
                 if iter_idx % self.validation_interval == 0:
-                    val_acc = self.validate(model, validation_loader)
+                    self.writer.add_scalar('Training Loss',
+                            intv_loss / self.validation_interval, global_step=iter_idx)
+                    self.writer.add_scalar('Training Accuracy',
+                            accuracy_score(gt_labels, pred_labels), global_step=iter_idx)
+                    intv_loss = 0
+                    pred_labels = []
+                    gt_labels = []
+                    val_acc = self.validate(model, validation_loader, iter_idx)
+                    self.writer.add_scalar('Validation Accuracy', val_acc,
+                            global_step=iter_idx)
                     if max_val_acc <= val_acc:
                         max_val_acc = val_acc
                         max_val_acc_idx = iter_idx
                         model.save_state(self.model_dir_location,
                                 self.train_instance_name,
                                 iter_idx, epoch)
+                self.writer.flush()
             print(f'\nEpoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
             print(f'Peach accuracy at iteration: {max_val_acc_idx}')
+            self.writer.close()
 
     def run(self):
         setup_log_file(self.log_dir_location, self.train_instance_name)
