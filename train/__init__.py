@@ -218,7 +218,7 @@ class ModelTrainer(object):
                 cur_data, cur_label = data
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
-                _, pred_prob, _ = model.forward(batch_data)
+                _, pred_prob, _ = model.forward(cur_data)
                 if self.is_binary:
                     pred_labels += (pred_prob >=
                             0.5).type(torch.int).cpu().numpy().tolist()
