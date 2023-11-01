@@ -16,7 +16,7 @@ default_patch_pattern = 'annotation/subtype/slide'
 
 description="""Trains a model for patch classification. This process does the training in the following manner:
 
- (1) Takes in a JSON file (aka. file of one or more chunks) that is either a split JSON file created by `docker_create_cross_validation_groups`, or a group JSON file created by `docker_create_groups` specified by --chunk_file_location. Each chunk contains patch paths to feed into the classifier. Use --training_chunks to select the chunks to include in your training set, etc. JSON files use Mitch's format for groups i.e. it is a json file with the format
+ (1) Takes in a JSON file (aka. file of one or more chunks) that is either a split JSON file created by `singularity_create_cross_validation_groups`, or a group JSON file created by `singularity_create_groups` specified by --chunk_file_location. Each chunk contains patch paths to feed into the classifier. Use --training_chunks to select the chunks to include in your training set, etc. JSON files use Mitch's format for groups i.e. it is a json file with the format
 
 {
     "chunks": [
@@ -35,25 +35,29 @@ description="""Trains a model for patch classification. This process does the tr
     "deep_model" : "vgg19_bn",
     "use_weighted_loss" : false,
     "continue_train" : false,
+        "normalize" : {
+        "normalize" : false,
+        "mean" : [ 0.485, 0.456, 0.406 ],
+        "std" : [ 0.229, 0.224, 0.225 ]
+    },
     "parameters" : {
         "pretrained" : true
     },
     "optimizer" : {
         "type" : "Adam",
         "parameters" : {
-            "lr" : 0.0002,
+            "lr" : 0.00001,
             "amsgrad" : true,
             "weight_decay" : 0.0005
         }
     }
 }
 
- (3) For each epoch (specified by --epochs), we train the classifier using all patches in the training set, feeding the classifier a batch of patches (with size specified by --batch_size). At every batch interval (specififed by --validation_interval) we run validation loop and save (or overwrite) the model if it achieves the as of yet highest validation accuracy.
 
- (4) All argument flags used in `docker_train` are saved to a YAML section in the log file (specified by --log_dir_location). Components using the model like `docker_evaluate` reads this log file to find the saved model and model parameters."""
+ (3) For each epoch (specified by --epochs), we train the classifier using all patches in the training set, feeding the classifier a batch of patches (with size specified by --batch_size). At every batch interval (specififed by --validation_interval) we run validation loop and save (or overwrite) the model if it achieves the as of yet highest validation accuracy.
+"""
 
 epilog="""
-See JIRA tickets for updating docker_{train, evaluate}
 """
 
 @manifest_arguments(default_component_id="try_me", description=description, epilog=epilog)
