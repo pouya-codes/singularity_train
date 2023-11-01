@@ -29,10 +29,8 @@ From: debian:9
     
     #Install submodules
     pip install efficientnet-pytorch
-    git clone https://github.com/pouya1991/AIMLab_submodule_utils.git
-    pip install -e ./AIMLab_submodule_utils
-    git clone https://github.com/pouya1991/AIMLab_submodule_cv.git
-    pip install -e ./AIMLab_submodule_cv
+    pip install pyyaml h5py openslide-python tabulate matplotlib pandas Shapely numpy pytest
+    pip install pillow tqdm h5py numpy pyyaml pynvml scikit-image scikit-learn torch torchvision EfficientNet
 
 
 %runscript
