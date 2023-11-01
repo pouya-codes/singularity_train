@@ -28,10 +28,12 @@ From: debian:9
     conda install -c conda-forge protobuf
     
     #Install submodules
-    git clone https://github.com/pouya1991/AIMLab
-    pip install AIMLab/submodule_cv-0.0.1-py3-none-any.whl
-    pip install AIMLab/submodule_utils-0.0.1-py3-none-any.whl
-    rm -rf AIMLab
+    git clone https://github.com/pouya1991/AIMLab_submodule_utils.git
+    pip install -e ./AIMLab_submodule_utils
+    git clone https://github.com/pouya1991/AIMLab_submodule_cv.git
+    pip install -e ./AIMLab_submodule_cv
+    rm -rf AIMLab_submodule_utils
+    rm -rf AIMLab_submodule_cv
 
 
 %runscript
