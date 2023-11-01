@@ -144,7 +144,7 @@ class DeepModel(BaseModel):
         save_path = os.path.join(save_location, filename)
         os.makedirs(save_location, exist_ok=True)
         state = {
-            'epoch', epoch,
+            'epoch': epoch,
             'iter_idx': iter_idx,
             'state_dict': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict()

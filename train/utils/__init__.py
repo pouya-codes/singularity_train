@@ -1,4 +1,4 @@
-from create_groups.utils.subtype_enum import BinaryEnum
+from train.utils.subtype_enum import BinaryEnum
 from pathlib import Path
 # from pynvml import *
 # from email.mime.text import MIMEText

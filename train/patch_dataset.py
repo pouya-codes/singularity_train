@@ -4,7 +4,6 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from PIL import Image
 from skimage import io, transform
-import cv2 as cv
 import numpy
 import torchvision
 

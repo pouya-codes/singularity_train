@@ -3,7 +3,6 @@ import json
 import time
 import sys
 
-import cv2 as cv
 from pynvml import *
 import numpy as np
 import torch
@@ -162,7 +161,7 @@ class ModelTrainer(object):
             Patch paths from the chunks
         """
         patch_paths = []
-        with open(self.chunk_file_location) f:
+        with open(self.chunk_file_location) as f:
             data = json.load(f)
             chunks = data['chunks']
             for chunk in data['chunks']:
@@ -208,7 +207,7 @@ class ModelTrainer(object):
         gt_labels = []
         model.model.eval()
         with torch.no_grad():
-            val_idx, data in enumerate(validation_loader):
+            for val_idx, data in enumerate(validation_loader):
                 if self.num_validation_batches is not None \
                         and val_idx >= self.num_validation_batches:
                     break
@@ -241,7 +240,7 @@ class ModelTrainer(object):
                 model.optimize_parameters(logits, train_labels, output)
                 if iter_idx % self.validation_interval == 0:
                     val_acc = self.validate(model, validation_loader)
-                    if max_val_acc =< val_acc:
+                    if max_val_acc <= val_acc:
                         max_val_acc = val_acc
                         max_val_acc_idx = iter_idx
                         model.save_state(self.model_dir_location,
