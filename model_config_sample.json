@@ -1,24 +1,34 @@
 {
-    "num_subtypes" : 10,
+    "num_subtypes" : 2,
     "deep_model" : "resnet34",
     "continue_train" : false,
     "normalize" : {
-        "normalize" : false,
-        "mean" : [ 0.485, 0.456, 0.406 ],
-        "std" : [ 0.229, 0.224, 0.225 ]
+        "normalize" : true,
+        "mean" : [ 0.7371, 0.6904, 0.8211 ],
+        "std" : [ 0.0974, 0.0945, 0.0523 ]
     },
     "augmentation" : {
         "augmentation": true,
-        "resize": 325,
-        "crop": 299
+        "flip": true,
+        "color_jitter": true,
+        "rotation": true,
+        "cut_out": {
+            "num_cut": 2,
+            "size_cut": 100,
+            "color_cut": "white"
+        }
     },
     "use_weighted_loss" : {
-        "use_weighted_loss" : true,
+        "use_weighted_loss" : false,
         "weight": [2, 1]
     },
     "use_weighted_sampler" : false,
     "use_balanced_sampler" : true,
-    "freeze": 30,
+    "mix_up" : {
+        "mix_up" : true,
+        "alpha": 0.4
+    },
+    "freeze": -1,
     "parameters" : {
         "pretrained" : true
     },
