@@ -484,6 +484,8 @@ class ModelTrainer(PatchHanger):
             training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True)
             validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
             self.train(model, training_loader, validation_loader)
+            if self.best_model_state_dict:
+                model.model.load_state_dict(self.best_model_state_dict)
             self.test(model, validation_loader,'Validation')
         if (self.testing_model) :
             test_loader = self.create_data_loader(self.test_chunks, shuffle=self.testing_shuffle)
