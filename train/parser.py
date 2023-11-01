@@ -126,6 +126,10 @@ def create_parser(parser):
         parser.add_argument("--gpu_id", type=int, required=False,
                 help="The ID of GPU to select. Default uses GPU with the most free memory.")
 
+        parser.add_argument("--number_of_gpus", type=int, required=False, default=1,
+                help="The number of GPUs to use. Default uses a GPU with the most free memory.")
+
+
         parser.add_argument("--seed", type=int,
                 default=DEAFULT_SEED,
                 help="Seed for random shuffle.")

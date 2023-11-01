@@ -125,6 +125,7 @@ class ModelTrainer(PatchHanger):
         self.num_patch_workers = config.num_patch_workers
         self.num_validation_batches = config.num_validation_batches
         self.gpu_id = config.gpu_id
+        self.number_of_gpus = config.number_of_gpus
         self.training_shuffle = config.training_shuffle
         self.validation_shuffle = config.validation_shuffle
 
@@ -159,48 +160,14 @@ class ModelTrainer(PatchHanger):
         self.model_file_location = os.path.join(self.model_dir_location,
                 f'{self.instance_name}.pth')
 
-    @classmethod
-    def from_config_file(cls, config_file_location):
-        pass
-
-    @classmethod
-    def from_arguments(cls, config_file_location):
-        pass
-
-    def print_parameters(self):
-        """Print argument parameters as YAML data to log file.
-        The YAML data can be read from the log file by subsequent components.
-        """
-        payload = yaml.dump({
-            ## Arguments
-            'experiment_name':     self.experiment_name,
-            'batch_size':          self.batch_size,
-            'validation_interval': self.validation_interval,
-            'epochs':              self.epochs,
-            'training_chunks':     self.training_chunks,
-            'validation_chunks':   self.validation_chunks,
-            'is_binary':           self.is_binary,
-            'subtypes':            self.raw_subtypes,
-            'patch_pattern': self.raw_patch_pattern,
-            'chunk_file_location':   self.chunk_file_location,
-            'log_dir_location':    self.log_dir_location,
-            'model_dir_location': self.model_dir_location,
-            'model_config_location': self.model_config_location,
-            'num_patch_workers': self.num_patch_workers,
-            'num_validation_batches': self.num_validation_batches,
-            'gpu_id': self.gpu_id,
-            'seed':   self.seed,
-            'training_shuffle': self.training_shuffle,
-            'validation_shuffle': self.validation_shuffle,
-            # Generated values
-            'instance_name': self.instance_name,
-            'model_file_location': self.model_file_location,
-            'writer_log_dir_location': self.writer_log_dir_location
-        })
-        print('---') # begin YAML
-        print(payload)
-        print('...') # end YAML
+        print(20*'.') # begin
+        for key ,value in config.__dict__.items() :
+            if key!="subparser" :
+                print(f"{key}: {value}")
+        print(20*'...') # end
         print(f'Instance name: {self.instance_name}')
+
+
 
     def validate(self, model, validation_loader, iter_idx):
         """Runs the validation loop
@@ -450,33 +417,23 @@ class ModelTrainer(PatchHanger):
                             print(f'Peach accuracy at iteration: {max_val_acc_idx}')
                             self.writer.close()
                             return
-
-
-
                 self.writer.flush()
+
             print(f'\nEpoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
             print(f'Peach accuracy at iteration: {max_val_acc_idx}')
             self.writer.close()
 
-    def build_model(self):
-        model = super().build_model()
-        print(model.model)
-        return model
-
-
     def run(self):
         setup_log_file(self.log_dir_location, self.instance_name)
-        self.print_parameters()
-        gpu_selector(self.gpu_id)
+        gpu_devices = gpu_selector(self.gpu_id, self.number_of_gpus)
         training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle)
         validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
-        model = self.build_model()
+        model = self.build_model(gpu_devices)
         self.train(model, training_loader, validation_loader)
         self.test(model, validation_loader,'Validation')
         if (self.testing_model) :
             setup_log_file(self.test_log_dir_location, self.instance_name)
             test_loader = self.create_data_loader(self.test_chunks, shuffle=self.testing_shuffle)
             model.model.load_state_dict(self.best_model_state_dict)
-            # model.load_state(self.model_file_location)
             self.test(model, test_loader, 'Test')
