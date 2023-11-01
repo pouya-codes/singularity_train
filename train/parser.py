@@ -162,16 +162,42 @@ def create_parser(parser):
 
         subparsers = parser.add_subparsers(dest="subparser", required=False)
 
-        subparser_parameters = subparsers.add_parser("early_stopping")
+        subparser_parameters = subparsers.add_parser("freeze_training")
 
-        subparser_parameters.add_argument("--use_early_stopping", type=str2bool, nargs='?',
+        subparser_parameters.add_argument("--use_freeze_training", type=str2bool, nargs='?',
                         const=True, default=False, required=False,
                 help="Uses EarlyStopping"
                 "Default uses False")
-        subparser_parameters.add_argument("--patience", type=int, default=7, required=False,
+
+        subparser_parameters.add_argument("--freeze_epochs", type=int, default=1, required=False,
                 help="How long to wait after last time validation loss improved."
                      "Default: 7")
-        subparser_parameters.add_argument("--delta", type=float, default=0, required=False,
+
+        subparser_parameters.add_argument("--unfreeze_epochs", type=int, default=5, required=False,
+                help="How long to wait after last time validation loss improved."
+                     "Default: 7")
+
+        subparser_parameters.add_argument("--base_lr", type=float, default=2e-3, required=False,
+                help="Minimum change in the monitored quantity to qualify as an improvement."
+                "Default: 0")
+
+        subparser_parameters.add_argument("--lr_mult", type=int, default=100, required=False,
+                help="Minimum change in the monitored quantity to qualify as an improvement."
+                "Default: 0")
+
+        subparser_parameters.add_argument("--use_scheduler", action='store_true',
+                help="Shuffle the validation set.")
+
+        subparser_parameters_ = subparsers.add_parser("early_stopping")
+
+        subparser_parameters_.add_argument("--use_early_stopping", type=str2bool, nargs='?',
+                        const=True, default=False, required=False,
+                help="Uses EarlyStopping"
+                "Default uses False")
+        subparser_parameters_.add_argument("--patience", type=int, default=7, required=False,
+                help="How long to wait after last time validation loss improved."
+                     "Default: 7")
+        subparser_parameters_.add_argument("--delta", type=float, default=0, required=False,
                 help="Minimum change in the monitored quantity to qualify as an improvement."
                 "Default: 0")
 

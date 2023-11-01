@@ -171,7 +171,7 @@ class ModelTrainer(PatchHanger):
         # Amirali
         self.class_weight = self.model_config["use_weighted_loss"]["weight"] if \
             self.model_config["use_weighted_loss"]["use_weighted_loss"] else None
-        self.MixUp = True if 'mix_up' in self.model_config and self.model_config['mix_up']['mix_up'] else False
+        self.MixUp = True if 'mix_up' in self.model_config and self.model_config['mix_up']['use_mix_up'] else False
         self.scheduler_step = config.scheduler_step
         if "scheduler" in self.model_config:
             if self.scheduler_step is None:
@@ -182,6 +182,12 @@ class ModelTrainer(PatchHanger):
         else:
             self.scheduler = False
         # self.scheduler  = True if "scheduler" in self.model_config and self.scheduler_step is not None else False
+        self.use_freeze_training = config.use_freeze_training
+        self.freeze_epochs = config.freeze_epochs
+        self.unfreeze_epochs = config.unfreeze_epochs
+        self.base_lr = config.base_lr
+        self.lr_mult = config.lr_mult
+        self.use_scheduler = config.use_scheduler
 
     def print_parameters(self):
         parameters = self.config.__dict__.copy()
@@ -387,7 +393,7 @@ class ModelTrainer(PatchHanger):
         validation_loader : torch.DataLoader
             Loader for validation set.
         """
-        iter_idx = 0
+        iter_idx = -1
         max_val_acc = float('-inf')
         max_val_acc_idx = -1
         intv_loss = 0
@@ -398,8 +404,9 @@ class ModelTrainer(PatchHanger):
         # initialize the early_stopping object
         if(self.early_stopping):
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
-
+        self.validation_interval = len(training_loader) if self.validation_interval==-1 else self.validation_interval
         val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
+        max_val_acc = val_acc
         print(f'Before training, validation accuracy is {val_acc}, validation loss is {val_loss}!')
         ###################
         # train the model #
@@ -481,6 +488,38 @@ class ModelTrainer(PatchHanger):
                 print(f"Learning rate is {model.get_current_lr()}")
             self.writer.close()
 
+    def freeze_train(self, model, training_loader, validation_loader):
+        """Runs the training loop
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            Model to train
+
+        training_loader : torch.DataLoader
+            Loader for training set.
+
+        validation_loader : torch.DataLoader
+            Loader for validation set.
+        """
+        # Freeze
+        self.epochs = self.freeze_epochs
+        print(f"Freezing model for {self.epochs} epochs ...")
+        model.freeze()
+        model.update_optimizer_schedular(self.base_lr, use_scheduler=self.use_scheduler,
+                                         epoch=self.epochs, batch_per_epoch=len(training_loader))
+        self.train(model, training_loader, validation_loader)
+
+        # Unfreeze
+        self.epochs = self.unfreeze_epochs
+        self.base_lr /= 2
+        print(f"UnFreezing model for {self.epochs} epochs ...")
+        model.unfreeze()
+        model.update_optimizer_schedular([self.base_lr/self.lr_mult, self.base_lr],
+                                         use_scheduler=self.use_scheduler, epoch=self.epochs,
+                                         batch_per_epoch=len(training_loader))
+        self.train(model, training_loader, validation_loader)
+
     def run(self):
         if self.train_model:
             setup_log_file(self.log_dir_location, self.instance_name)
@@ -492,7 +531,10 @@ class ModelTrainer(PatchHanger):
         if (self.train_model) :
             training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True)
             validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
-            self.train(model, training_loader, validation_loader)
+            if not self.use_freeze_training:
+                self.train(model, training_loader, validation_loader)
+            else:
+                self.freeze_train(model, training_loader, validation_loader)
             if self.best_model_state_dict:
                 model.model.load_state_dict(self.best_model_state_dict)
             self.test(model, validation_loader,'Validation')
