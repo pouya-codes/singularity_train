@@ -173,8 +173,15 @@ class ModelTrainer(PatchHanger):
             self.model_config["use_weighted_loss"]["use_weighted_loss"] else None
         self.MixUp = True if 'mix_up' in self.model_config and self.model_config['mix_up']['mix_up'] else False
         self.scheduler_step = config.scheduler_step
-        if "scheduler" in self.model_config and self.scheduler_step is not None:
-            self.scheduler = True
+        if "scheduler" in self.model_config:
+            if self.scheduler_step is None:
+                raise ValueError("scheduler_step is not determined!")
+            else:
+                self.scheduler = True
+                print("scheduler is selected!")
+        else:
+            self.scheduler = False
+        # self.scheduler  = True if "scheduler" in self.model_config and self.scheduler_step is not None else False
 
     def print_parameters(self):
         parameters = self.config.__dict__.copy()
@@ -470,6 +477,8 @@ class ModelTrainer(PatchHanger):
             print(f'\nEpoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
             print(f'Peak accuracy at iteration: {max_val_acc_idx}')
+            if self.scheduler:
+                print(f"Learning rate is {model.get_current_lr()}")
             self.writer.close()
 
     def run(self):
