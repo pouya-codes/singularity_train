@@ -190,6 +190,12 @@ class ModelTrainer(PatchHanger):
             self.use_scheduler = config.use_scheduler
             self.scheduler = True if self.use_scheduler else self.scheduler
 
+        # representation learning parameters
+        self.representation_learning = not isinstance(config.subparser, type(None)) and config.use_representation_learning
+        if self.representation_learning:
+            self.model_path_location = config.model_path_location
+            self.train_feature_extractor = config.train_feature_extractor
+
         self.progressive_resizing = config.progressive_resizing
 
     def print_parameters(self):
@@ -527,6 +533,33 @@ class ModelTrainer(PatchHanger):
         self.train(model, training_loader, validation_loader, best_val_acc=best_val_acc)
         self.base_lr *= 2
 
+    def repr_train(self, model, training_loader, validation_loader):
+        """Runs the training loop
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            Model to train
+
+        training_loader : torch.DataLoader
+            Loader for training set.
+
+        validation_loader : torch.DataLoader
+            Loader for validation set.
+        """
+        model.load_state_repr(self.model_path_location)
+        if not self.train_feature_extractor:
+            # Only train classifier
+            # model.freeze_all()
+            # model.make_classifier_layer_trainable()
+            # train classifier + bn of feature extractor
+            model.freeze()
+            model.update_optimizer_schedular(learning_rate=None, use_scheduler=False,
+                                             epoch=self.epochs)
+
+        self.train(model, training_loader, validation_loader)
+
+
     def run(self):
         if self.train_model:
             setup_log_file(self.log_dir_location, self.instance_name)
@@ -541,10 +574,12 @@ class ModelTrainer(PatchHanger):
                     print(f"\nTraining model with SIZE = {size}")
                 training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True, size=size)
                 validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle, size=size)
-                if not self.freeze_training:
-                    self.train(model, training_loader, validation_loader)
-                else:
+                if self.freeze_training:
                     self.freeze_train(model, training_loader, validation_loader)
+                elif self.representation_learning:
+                    self.repr_train(model, training_loader, validation_loader)
+                else:
+                    self.train(model, training_loader, validation_loader)
             if size!=-1:
                 validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
             if self.best_model_state_dict:

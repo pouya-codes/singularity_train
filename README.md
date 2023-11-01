@@ -4,7 +4,7 @@
 
 ```
 Date Created: 22 July 2020
-Last Update: 11 May 2021 by Amirali
+Last Update: 1 June 2021 by Amirali
 Developer: Colin Chen
 Version: 1.0
 ```
@@ -138,10 +138,11 @@ usage: app.py from-arguments [-h] --experiment_name EXPERIMENT_NAME
                              [--progressive_resizing PROGRESSIVE_RESIZING [PROGRESSIVE_RESIZING ...]]
                              [--scheduler_step {epoch,batch}]
                              [--writer_log_dir_location WRITER_LOG_DIR_LOCATION]
-                             {freeze_training,early_stopping,test_model} ...
+                             {freeze_training,early_stopping,representation_learning,test_model}
+                             ...
 
 positional arguments:
-  {freeze_training,early_stopping,test_model}
+  {freeze_training,early_stopping,representation_learning,test_model}
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -250,6 +251,9 @@ usage: app.py from-arguments freeze_training [-h]
                                              [--use_early_stopping [USE_EARLY_STOPPING]]
                                              [--patience PATIENCE]
                                              [--delta DELTA]
+                                             [--use_representation_learning [USE_REPRESENTATION_LEARNING]]
+                                             [--model_path_location MODEL_PATH_LOCATION]
+                                             [--train_feature_extractor [TRAIN_FEATURE_EXTRACTOR]]
                                              [--testing_model [TESTING_MODEL]]
                                              [--test_model_file_location TEST_MODEL_FILE_LOCATION]
                                              [--old_version]
@@ -301,6 +305,21 @@ Early Stopping:
 
   --delta DELTA         Minimum change in the monitored quantity to qualify as an improvement.
                          (default: 0)
+
+Representation Learning:
+  Use trained model on representation learning for classification.
+
+  --use_representation_learning [USE_REPRESENTATION_LEARNING]
+                        Enable representation learning
+                         (default: False)
+
+  --model_path_location MODEL_PATH_LOCATION
+                        Path to saved model is used for representation (i.e. /path/to/model.pth).
+                         (default: None)
+
+  --train_feature_extractor [TRAIN_FEATURE_EXTRACTOR]
+                        By defuault, only classifier part should be trained. By setting this flag, the feature extractor will be trained too.
+                         (default: False)
 
 Testing:
   Enable parameters for testing.
@@ -375,7 +394,7 @@ Model definition and augmentations are defined in the `config.json` file. It is 
 3.4.3. `probability`: {float} -> probability of doing this augmentation
 3.4.4. `color`: {white,black} -> the color of padding when use ratio less than 1.
 3.5. `cut_out`:
-3.5.1. `use_cut_out`: {true,false} -> if true, add num_cut to the augmentation list.
+3.5.1. `use_num_cut`: {true,false} -> if true, add num_cut to the augmentation list.
 3.5.2. `num_cut`: {int} -> number of cutouts
 3.5.3. `size_cut`: {int} -> size of each cutout in pixels
 3.5.4. `color_cut`: {white,black} -> the color of cutouts

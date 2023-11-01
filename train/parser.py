@@ -233,7 +233,7 @@ def create_parser(parser):
         early_stop_parameters = subparser_parameters.add_argument_group('Early Stopping',
                 'Enable early stopping.')
         early_stop_parameters.add_argument("--use_early_stopping", type=str2bool, nargs='?',
-                        const=True, default=False,
+                const=True, default=False,
                 help="Enable Early Stopping")
 
         early_stop_parameters.add_argument("--patience", type=int, default=7,
@@ -242,12 +242,27 @@ def create_parser(parser):
         early_stop_parameters.add_argument("--delta", type=float, default=0,
                 help="Minimum change in the monitored quantity to qualify as an improvement.")
 
+        subparser.add_parser("representation_learning")
+        repr_learning_parameters = subparser_parameters.add_argument_group('Representation Learning',
+                'Use trained model on representation learning for classification.')
+        repr_learning_parameters.add_argument("--use_representation_learning", type=str2bool, nargs='?',
+                const=True, default=False,
+                help="Enable representation learning")
+
+        repr_learning_parameters.add_argument("--model_path_location", type=file_path,
+                help="Path to saved model is used for representation (i.e. /path/to/model.pth).")
+
+        repr_learning_parameters.add_argument("--train_feature_extractor", type=str2bool, nargs='?',
+                const=True, default=False,
+                help="By defuault, only classifier part should be trained. By setting "
+                "this flag, the feature extractor will be trained too.")
+
         subparser.add_parser("test_model")
         test_parameters = subparser_parameters.add_argument_group('Testing',
                 'Enable parameters for testing.')
 
         test_parameters.add_argument("--testing_model", type=str2bool, nargs='?',
-                        const=True, default=False,
+                const=True, default=False,
                 help="Test the model performance after training")
 
         test_parameters.add_argument("--test_model_file_location", type=file_path,

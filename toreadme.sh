@@ -4,7 +4,7 @@ echo """# Train
 
 \`\`\`
 Date Created: 22 July 2020
-Last Update: 11 May 2021 by Amirali
+Last Update: 1 June 2021 by Amirali
 Developer: Colin Chen
 Version: 1.0
 \`\`\`
