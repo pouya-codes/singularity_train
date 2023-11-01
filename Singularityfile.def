@@ -16,23 +16,25 @@ From: debian:latest
     apt-get clean
 
     #Installing Anaconda 3
-    wget -c https://repo.anaconda.com/archive/Anaconda3-2021.04-Linux-x86_64.sh
-    /bin/bash Anaconda3-2021.04-Linux-x86_64.sh -bfp /usr/local
-    rm Anaconda3-2021.04-Linux-x86_64.sh
+    wget -c https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh
+    /bin/bash Anaconda3-2022.05-Linux-x86_64.sh -bfp /usr/local
+    rm Anaconda3-2022.05-Linux-x86_64.sh
 
     #Conda configuration of channels from .condarc file
     conda config --file /.condarc --add channels defaults
     conda config --file /.condarc --add channels conda-forge
     conda update conda 
-    conda install -c conda-forge tensorboard=1.15
+    conda install -c conda-forge tensorboard
     conda install -c conda-forge protobuf 
+    conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 
     #Install submodules
     pip install --upgrade pip
     #pip install efficientnet-pytorch
     pip install git+https:///github.com/Amiiirali/EfficientNet-PyTorch.git
     pip install pyyaml h5py openslide-python tabulate matplotlib pandas Shapely numpy pytest
-    pip install pillow tqdm h5py numpy pyyaml pynvml scikit-image scikit-learn torch torchvision
+    pip install pillow tqdm h5py numpy pyyaml pynvml scikit-image scikit-learn
+    # pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
     pip install grad-cam
     pip install ttach
     pip install opencv-python
