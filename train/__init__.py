@@ -334,7 +334,7 @@ class ModelTrainer(PatchHanger):
                 pred_probs = np.vstack((pred_probs, pred_prob))
 
                 if (self.detailed_test_result):
-                    for path_, pred_label_, true_label_, pred_prob_ in zip(cur_path, pred_label ,gt_label ,pred_probs) :
+                    for path_, pred_label_, true_label_, pred_prob_ in zip(cur_path, pred_label ,gt_label ,pred_prob) :
                         detailed_output_writer.writerow([path_, pred_label_, true_label_, pred_prob_])
                     # print(f"{path_} Predicted:{pred_label_} True:{true_label_} Probability:{pred_prob_}")
 

@@ -143,6 +143,9 @@ optional arguments:
 
   --gpu_id GPU_ID       The ID of GPU to select. Default uses GPU with the most free memory.
                          (default: None)
+                         
+  --number_of_gpus      The number of GPUs to use. Default uses a GPU with the most free memory.
+                         (default: 1)
 
   --seed SEED           Seed for random shuffle.
                          (default: 256)
