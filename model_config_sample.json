@@ -7,12 +7,12 @@
         "concat_pool": true
     },
     "normalize" : {
-        "use_normalize" : true,
+        "use_normalize" : false,
         "mean" : [ 0.7371, 0.6904, 0.8211 ],
         "std" : [ 0.0974, 0.0945, 0.0523 ]
     },
     "augmentation" : {
-        "use_augmentation": true,
+        "use_augmentation": false,
         "flip": true,
         "color_jitter": true,
         "rotation": true,
@@ -27,9 +27,9 @@
         "weight": [2, 1]
     },
     "use_weighted_sampler" : false,
-    "use_balanced_sampler" : true,
+    "use_balanced_sampler" : false,
     "mix_up" : {
-        "use_mix_up" : true,
+        "use_mix_up" : false,
         "alpha": 0.4
     },
     "freeze": -1,
