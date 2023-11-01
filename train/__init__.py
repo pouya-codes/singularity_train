@@ -7,10 +7,11 @@ import csv
 
 import yaml, random
 from submodule_utils.accuracy.slide_level_accuracy import SlideLevelAccuracy
+from submodule_utils.submodule_utils.metadata.heatmaps import generate_heatmaps
 from tqdm import tqdm
 from pynvml import *
 import numpy as np
-import torch
+import torch, h5py
 import torchvision
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import cohen_kappa_score
@@ -24,7 +25,8 @@ from copy import deepcopy
 
 import submodule_utils as utils
 from submodule_cv import (ChunkLookupException, setup_log_file,
-    gpu_selector, PatchHanger, EarlyStopping, mixup_data)
+                          gpu_selector, PatchHanger, EarlyStopping, mixup_data)
+
 
 class ModelTrainer(PatchHanger):
     """Trains a model
@@ -117,7 +119,7 @@ class ModelTrainer(PatchHanger):
         self.validation_chunks = config.validation_chunks
         self.is_binary = config.is_binary
         self.CategoryEnum = utils.create_category_enum(
-                self.is_binary, config.subtypes)
+            self.is_binary, config.subtypes)
         self.patch_pattern = utils.create_patch_pattern(config.patch_pattern)
         self.chunk_file_location = config.chunk_file_location
         self.log_dir_location = config.log_dir_location
@@ -152,18 +154,23 @@ class ModelTrainer(PatchHanger):
         self.slide_level_accuracy_threshold = config.slide_level_accuracy_threshold
         self.slide_level_accuracy_verbose = config.slide_level_accuracy_verbose
 
+        self.generate_heatmaps = config.generate_heatmaps
+        if self.generate_heatmaps:
+            self.heatmaps_dir_location = config.heatmaps_dir_location
+            self.slides_location = config.slides_location
+
         self.best_model_state_dict = None
 
         if config.writer_log_dir_location:
             self.writer_log_dir_location = config.writer_log_dir_location
         else:
             self.writer_log_dir_location = os.path.join(
-                    self.log_dir_location, self.experiment_name)
+                self.log_dir_location, self.experiment_name)
         if not os.path.exists(self.writer_log_dir_location):
             os.makedirs(self.writer_log_dir_location)
         self.writer = SummaryWriter(log_dir=self.writer_log_dir_location)
         self.model_file_location = os.path.join(self.model_dir_location,
-                f'{self.instance_name}.pth')
+                                                f'{self.instance_name}.pth')
         self.config = config
 
         #########
@@ -191,12 +198,29 @@ class ModelTrainer(PatchHanger):
             self.scheduler = True if self.use_scheduler else self.scheduler
 
         # representation learning parameters
-        self.representation_learning = not isinstance(config.subparser, type(None)) and config.use_representation_learning
+        self.representation_learning = not isinstance(config.subparser,
+                                                      type(None)) and config.use_representation_learning
         if self.representation_learning:
             self.model_path_location = config.model_path_location
             self.train_feature_extractor = config.train_feature_extractor
 
         self.progressive_resizing = config.progressive_resizing
+
+    def get_tile_dimensions(self, os_slide, patch_size):
+        width, height = os_slide.dimensions
+        return int(width / patch_size), int(height / patch_size)
+
+    def create_hdf_datasets(self, hdf, os_slide, CategoryEnum):
+        tile_width, tile_height = self.get_tile_dimensions(os_slide, self.patch_size)
+        group_name = "{}/{}".format(self.patch_size, self.magnification)
+        group = hdf.require_group(group_name)
+        datasets = {}
+        for c in CategoryEnum:
+            if c.name in group:
+                del group[c.name]
+            datasets[c.name] = group.create_dataset(c.name,
+                                                    (tile_height, tile_width,), dtype='f')
+        return datasets
 
     def print_parameters(self):
         parameters = self.config.__dict__.copy()
@@ -204,9 +228,9 @@ class ModelTrainer(PatchHanger):
         parameters['model_file_location'] = self.model_file_location
         parameters['writer_log_dir_location'] = self.writer_log_dir_location
         payload = yaml.dump(parameters)
-        print('---') # begin YAML
+        print('---')  # begin YAML
         print(payload)
-        print('...') # end YAML
+        print('...')  # end YAML
 
     def validate(self, model, validation_loader, iter_idx):
         """Runs the validation loop
@@ -229,14 +253,14 @@ class ModelTrainer(PatchHanger):
                 if self.num_validation_batches is not None \
                         and val_idx >= self.num_validation_batches:
                     break
-                cur_data, cur_label,_ ,_ = data
+                cur_data, cur_label, _, _ = data
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
                 logits, pred_prob, output = model.forward(cur_data)
                 val_loss += model.get_loss(logits, cur_label, output).item()
 
                 pred_labels += torch.argmax(pred_prob,
-                        dim=1).cpu().numpy().tolist()
+                                            dim=1).cpu().numpy().tolist()
                 gt_labels += cur_label.cpu().numpy().tolist()
                 val_idx += 1
 
@@ -311,7 +335,8 @@ class ModelTrainer(PatchHanger):
             # latex format
             if is_binary:
                 print(
-                    '||Dataset||Non-tumor Accuracy||Tumor Accuracy||Weighted Accuracy||Kappa||F1 Score||AUC||Average Accuracy||')
+                    '||Dataset||Non-tumor Accuracy||Tumor Accuracy||Weighted Accuracy||Kappa||F1 Score||AUC||Average '
+                    'Accuracy||')
                 print('|X|{:.2f}%|{:.2f}%|{:.2f}%|{:.4f}|{:.4f}|{:.4f}|{:.2f}%|'.format(
                     acc_per_subtype[0], acc_per_subtype[1], overall_acc * 100, overall_kappa, overall_f1, overall_auc,
                     acc_per_subtype.mean()))
@@ -330,24 +355,25 @@ class ModelTrainer(PatchHanger):
 
     def test(self, model, test_loader, tag):
 
-        if (self.detailed_test_result) :
-            detailed_output_file = open(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'), 'w')
-            detailed_output_writer = csv.writer(detailed_output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            detailed_output_writer.writerow(["path", "predicted_label", "target_label", "probability","chunk"])
-
+        if (self.detailed_test_result):
+            detailed_output_file = open(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'),
+                                        'w')
+            detailed_output_writer = csv.writer(detailed_output_file, delimiter=',', quotechar='"',
+                                                quoting=csv.QUOTE_MINIMAL)
+            detailed_output_writer.writerow(["path", "predicted_label", "target_label", "probability", "chunk"])
 
         pred_labels = []
         gt_labels = []
-        #pred_probs = np.array([]).reshape(
+        # pred_probs = np.array([]).reshape(
         #        0, len(self.CategoryEnum)) if not self.is_binary else np.array([])
         pred_probs = np.array([]).reshape(
-                0, len(self.CategoryEnum))
+            0, len(self.CategoryEnum))
 
         model.model.eval()
         with torch.no_grad():
             prefix = 'Testing: '
             for data in tqdm(test_loader, desc=prefix,
-                    dynamic_ncols=True, leave=True, position=0):
+                             dynamic_ncols=True, leave=True, position=0):
                 cur_data, cur_label, cur_path, cur_chunk = data
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
@@ -357,7 +383,7 @@ class ModelTrainer(PatchHanger):
                 #             0.5).type(torch.int).cpu().numpy().tolist()
                 # else:
                 pred_label = torch.argmax(pred_prob,
-                        dim=1).cpu().numpy().tolist()
+                                          dim=1).cpu().numpy().tolist()
                 pred_labels += pred_label
 
                 gt_label = cur_label.cpu().numpy().tolist()
@@ -367,19 +393,27 @@ class ModelTrainer(PatchHanger):
                 pred_probs = np.vstack((pred_probs, pred_prob))
 
                 if (self.detailed_test_result):
-                    for path_, pred_label_, true_label_, pred_prob_,cur_chunk_ in zip(cur_path, pred_label ,gt_label ,pred_prob, cur_chunk.cpu().numpy()) :
+                    for path_, pred_label_, true_label_, pred_prob_, cur_chunk_ in zip(cur_path, pred_label, gt_label,
+                                                                                       pred_prob,
+                                                                                       cur_chunk.cpu().numpy()):
                         detailed_output_writer.writerow([path_, pred_label_, true_label_, pred_prob_, cur_chunk_])
 
         if self.detailed_test_result:
             detailed_output_file.close()
             if self.slide_level_accuracy:
                 detailed_results = open(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'))
-                slide_level= SlideLevelAccuracy(csv.reader(detailed_results),self.patch_pattern,self.CategoryEnum,self.slide_level_accuracy_threshold,self.slide_level_accuracy_verbose)
+                slide_level = SlideLevelAccuracy(csv.reader(detailed_results), self.patch_pattern, self.CategoryEnum,
+                                                 self.slide_level_accuracy_threshold, self.slide_level_accuracy_verbose)
                 slide_level.calculate_slide_level_accuracy()
 
+            if (self.generate_heatmaps):
+                generate_heatmaps(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'),
+                                  self.patch_pattern, self.CategoryEnum, self.slides_location,
+                                  self.heatmaps_dir_location)
 
         print(f"{tag} Results:\n{40 * '*'}")
-        self.compute_metric(gt_labels, pred_labels, pred_probs, self.CategoryEnum, verbose=True, is_binary=self.is_binary)
+        self.compute_metric(gt_labels, pred_labels, pred_probs, self.CategoryEnum, verbose=True,
+                            is_binary=self.is_binary)
         print(f"{40 * '*'}")
 
     def train(self, model, training_loader, validation_loader, best_val_acc=None):
@@ -405,9 +439,9 @@ class ModelTrainer(PatchHanger):
         if self.MixUp:
             gt_labels_mixed = []
         # initialize the early_stopping object
-        if(self.early_stopping):
+        if (self.early_stopping):
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
-        self.validation_interval = len(training_loader) if self.validation_interval==-1 else self.validation_interval
+        self.validation_interval = len(training_loader) if self.validation_interval == -1 else self.validation_interval
         if best_val_acc is None:
             val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
             max_val_acc = val_acc
@@ -418,9 +452,9 @@ class ModelTrainer(PatchHanger):
         for epoch in range(self.epochs):
             prefix = f'Training Epoch {epoch}: '
             for data in tqdm(training_loader, desc=prefix,
-                    dynamic_ncols=True, leave=True, position=0):
+                             dynamic_ncols=True, leave=True, position=0):
                 iter_idx += 1
-                batch_data, batch_labels,_,_ = data
+                batch_data, batch_labels, _, _ = data
                 batch_data = batch_data.cuda()
                 batch_labels = batch_labels.cuda()
                 if self.MixUp:
@@ -431,31 +465,31 @@ class ModelTrainer(PatchHanger):
                                               batch_labels_mixed, lam)
                 else:
                     model.optimize_parameters(logits, batch_labels, output)
-                if self.scheduler and self.scheduler_step.upper()=="BATCH":
+                if self.scheduler and self.scheduler_step.upper() == "BATCH":
                     model.scheduler_step()
                 intv_loss += model.get_current_errors()
                 pred_labels += torch.argmax(probs,
-                        dim=1).cpu().numpy().tolist()
+                                            dim=1).cpu().numpy().tolist()
                 gt_labels += batch_labels.cpu().numpy().tolist()
                 if self.MixUp:
                     gt_labels_mixed += batch_labels_mixed.cpu().numpy().tolist()
-                if iter_idx % self.validation_interval == self.validation_interval-1:
+                if iter_idx % self.validation_interval == self.validation_interval - 1:
                     val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
                     if self.MixUp:
                         train_acc = lam * accuracy_score(gt_labels, pred_labels) + \
-                                    (1-lam) * accuracy_score(gt_labels_mixed, pred_labels)
+                                    (1 - lam) * accuracy_score(gt_labels_mixed, pred_labels)
                     else:
                         train_acc = accuracy_score(gt_labels, pred_labels)
                     self.writer.add_scalars(f"{self.instance_name}/loss",
-                            {
-                                'validation': val_loss,
-                                'train': intv_loss / self.validation_interval
-                            }, iter_idx)
+                                            {
+                                                'validation': val_loss,
+                                                'train': intv_loss / self.validation_interval
+                                            }, iter_idx)
                     self.writer.add_scalars(f"{self.instance_name}/accuracy",
-                            {
-                                'validation': val_acc,
-                                'train': train_acc
-                            }, iter_idx)
+                                            {
+                                                'validation': val_acc,
+                                                'train': train_acc
+                                            }, iter_idx)
                     print(f'\nEpoch: {epoch}, Iteration: {iter_idx}')
                     print(f'Training: accuracy is {train_acc}, loss is {intv_loss / self.validation_interval}')
                     print(f'Validation: accuracy is {val_acc}, loss is {val_loss}')
@@ -468,10 +502,11 @@ class ModelTrainer(PatchHanger):
                         max_val_acc = val_acc
                         max_val_acc_idx = iter_idx
                         model.save_state(self.model_dir_location,
-                                self.instance_name,
-                                iter_idx, epoch)
+                                         self.instance_name,
+                                         iter_idx, epoch)
                         if (self.save_model_for_export):
-                            torch.save(model,os.path.join(self.model_dir_location,"export_",self.instance_name,".pt"))
+                            torch.save(model,
+                                       os.path.join(self.model_dir_location, "export_", self.instance_name, ".pt"))
                         # store best state of model for testing
                         self.best_model_state_dict = deepcopy(model.model.state_dict())
                     if (self.early_stopping):
@@ -483,20 +518,21 @@ class ModelTrainer(PatchHanger):
                             self.writer.close()
                             return
                 self.writer.flush()
-            if self.scheduler and self.scheduler_step.upper()=="EPOCH":
+            if self.scheduler and self.scheduler_step.upper() == "EPOCH":
                 model.scheduler_step()
             print(f'\nEpoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
             print(f'Peak accuracy at iteration: {max_val_acc_idx}')
             self.writer.close()
             if self.scheduler:
-                print(f"Learning rates are: Feature_extraction={model.get_current_lr(0)}, Classifier={model.get_current_lr(1)}")
+                print(
+                    f"Learning rates are: Feature_extraction={model.get_current_lr(0)}, Classifier={model.get_current_lr(1)}")
         # If nothing is saved
-        if max_val_acc_idx==-1:
+        if max_val_acc_idx == -1:
             self.best_model_state_dict = deepcopy(model.model.state_dict())
             model.save_state(self.model_dir_location,
-                                self.instance_name,
-                                iter_idx, epoch)
+                             self.instance_name,
+                             iter_idx, epoch)
             print("Saved model is initialized one!")
         return max_val_acc
 
@@ -527,7 +563,7 @@ class ModelTrainer(PatchHanger):
         self.base_lr /= 2
         print(f"\nUnFreezing model for {self.epochs} epochs ...")
         model.unfreeze()
-        model.update_optimizer_schedular([self.base_lr/self.lr_mult, self.base_lr],
+        model.update_optimizer_schedular([self.base_lr / self.lr_mult, self.base_lr],
                                          use_scheduler=self.use_scheduler, epoch=self.epochs,
                                          batch_per_epoch=len(training_loader))
         self.train(model, training_loader, validation_loader, best_val_acc=best_val_acc)
@@ -559,7 +595,6 @@ class ModelTrainer(PatchHanger):
 
         self.train(model, training_loader, validation_loader)
 
-
     def run(self):
         if self.train_model:
             setup_log_file(self.log_dir_location, self.instance_name)
@@ -569,24 +604,26 @@ class ModelTrainer(PatchHanger):
         # gpu_devices = gpu_selector(self.gpu_id, self.number_of_gpus)
         gpu_devices = None
         model = self.build_model(gpu_devices, class_weight=self.class_weight)
-        if (self.train_model) :
+        if (self.train_model):
             for size in self.progressive_resizing:
-                if size!=-1:
+                if size != -1:
                     print(f"\nTraining model with SIZE = {size}")
-                training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True, size=size)
-                validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle, size=size)
+                training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle,
+                                                          training_set=True, size=size)
+                validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle,
+                                                            size=size)
                 if self.freeze_training:
                     self.freeze_train(model, training_loader, validation_loader)
                 elif self.representation_learning:
                     self.repr_train(model, training_loader, validation_loader)
                 else:
                     self.train(model, training_loader, validation_loader)
-            if size!=-1:
+            if size != -1:
                 validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
             if self.best_model_state_dict:
                 model.model.load_state_dict(self.best_model_state_dict)
-            self.test(model, validation_loader,'Validation')
-        if (self.testing_model) :
+            self.test(model, validation_loader, 'Validation')
+        if (self.testing_model):
             test_loader = self.create_data_loader(self.test_chunks, shuffle=self.testing_shuffle)
             if (self.best_model_state_dict and not self.test_model_file_location):
                 model.model.load_state_dict(self.best_model_state_dict)
