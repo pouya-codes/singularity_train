@@ -371,19 +371,19 @@ Testing:
                          (default: None)
                          
   --gradcam	
-  						Generate the grad cam image files
+                        Generate the grad cam image files
                         (default: False)
                         
   --gradcam_dir_location GRADCAM_DIR_LOCATION
-  						Location of generated grad cam image
+                        Location of generated grad cam image
                         (default: None)
                         
   --slides_location SLIDES_LOCATION
-  						Path to the slides used to create gradCAM output
+                        Path to the slides used to create gradCAM output
                         (default: None)
                         
   --gradcam_h5
-  						Generate the overlay grad cam h5 files that can be used to visualize the results on cPathPortal
+                        Generate the overlay grad cam h5 files that can be used to visualize the results on cPathPortal
                         (default: False)
 
   
