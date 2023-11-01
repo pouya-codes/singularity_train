@@ -240,8 +240,8 @@ class ModelTrainer(object):
                     dynamic_ncols=True, leave=True, position=0):
                 iter_idx += 1
                 batch_data, batch_labels = data
-                logits, probs, output = model.forward(train_data)
-                model.optimize_parameters(logits, train_labels, output)
+                logits, probs, output = model.forward(batch_data)
+                model.optimize_parameters(logits, batch_labels, output)
                 if iter_idx % self.validation_interval == 0:
                     val_acc = self.validate(model, validation_loader)
                     if max_val_acc <= val_acc:
