@@ -1,7 +1,6 @@
 {
     "num_subtypes" : 10,
     "deep_model" : "resnet34",
-    "use_weighted_loss" : false,
     "continue_train" : false,
         "normalize" : {
         "normalize" : false,
