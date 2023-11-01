@@ -257,7 +257,7 @@ class ModelTrainer(PatchHanger):
                 print('Warning:', e)
                 overall_auc = 0.00
         else:
-            overall_auc = roc_auc_score(labels, probs, average='macro')
+            overall_auc = roc_auc_score(labels, probs[:, 1], average='macro')
         # disply results
         if verbose:
             print('Acc: {:.2f}\%'.format(overall_acc * 100))
