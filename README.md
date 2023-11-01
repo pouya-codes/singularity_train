@@ -17,41 +17,78 @@ usage: app.py [-h] --experiment_name EXPERIMENT_NAME --batch_size BATCH_SIZE
               [--gpu_id GPU_ID] [--seed SEED] [--training_shuffle]
               [--validation_shuffle]
 
+Trains a model for patch classification. This process does the training in the following manner:
+
+ (1) Takes in a JSON file (aka. file of one or more chunks) that is either a split JSON file created by `docker_create_cross_validation_groups`, or a group JSON file created by `docker_create_groups` specified by --chunk_file_location. Each chunk contains patch paths to feed into the classifier. Use --training_chunks to select the chunks to include in your training set, etc. JSON files use Mitch's format for groups i.e. it is a json file with the format
+
+{
+    "chunks": [
+        {
+            "id": int,
+            "imgs": list of paths to patches
+        },
+        ...
+    ]
+}
+
+ (2) The flag --model_config_location specifies a path to a JSON file containing model hyperparameters. It is a residue of an old config format that didn't have a time to get refactored. For most of the experiments at AIM Lab, we currently use the below config JSON. The primary change is to set the num_subtypes
+
+{
+    "num_subtypes" : <number>,
+    "deep_model" : "vgg19_bn",
+    "use_weighted_loss" : false,
+    "continue_train" : false,
+    "parameters" : {
+        "pretrained" : true
+    },
+    "optimizer" : {
+        "type" : "Adam",
+        "parameters" : {
+            "lr" : 0.0002,
+            "amsgrad" : true
+        }
+    }
+}
+
+ (3) For each epoch (specified by --epochs), we train the classifier using all patches in the training set, feeding the classifier a batch of patches (with size specified by --batch_size). At every batch interval (specififed by --validation_interval) we run validation loop and save (or overwrite) the model if it achieves the as of yet highest validation accuracy.
+
+ (4) All argument flags used in `docker_train` are saved to a YAML section in the log file (specified by --log_dir_location). Components using the model like `docker_evaluate` reads this log file to find the saved model and model parameters.
+
 optional arguments:
   -h, --help            show this help message and exit
 
   --experiment_name EXPERIMENT_NAME
-                        experiment name used to name log, model outputs
+                        Experiment name used to name log, model outputs.
                          (default: None)
 
   --batch_size BATCH_SIZE
-                        batch size to use on training, validation and test dataset
+                        Batch size is the number of patches to put in a batch. This flag sets the batch size to use on training, validation and test datasets.
                          (default: None)
 
   --validation_interval VALIDATION_INTERVAL
-                        the interval of the training loop to start validating model
+                        The interval of the training loop to start validating model.
                          (default: None)
 
-  --epochs EPOCHS       the number of epochs to run model training on training dataset
+  --epochs EPOCHS       The number of epochs to run model training on training dataset.
                          (default: None)
 
   --training_chunks TRAINING_CHUNKS [TRAINING_CHUNKS ...]
-                        space separated number IDs specifying chunks to use for training
+                        Space separated number IDs specifying chunks to use for training.
                          (default: [0])
 
   --validation_chunks VALIDATION_CHUNKS [VALIDATION_CHUNKS ...]
-                        space separated number IDs specifying chunks to use for validation
+                        Space separated number IDs specifying chunks to use for validation.
                          (default: [1])
 
-  --is_binary           Whether we want to categorize patches by the Tumor/Normal category (true) or by the subtype category (false)
+  --is_binary           Whether we want to categorize patches by the Tumor/Normal category (true) or by the subtype category (false).
                          (default: False)
 
   --subtypes SUBTYPES [SUBTYPES ...]
                         space separated words describing subtype=groupping pairs for this study. Example: if doing one-vs-rest on the subtypes MMRD vs P53ABN, P53WT and POLE then the input should be 'MMRD=0 P53ABN=1 P53WT=1 POLE=1'
-                         (default: [['MMRD', 0], ['P53ABN', 1], ['P53WT', 2], ['POLE', 3]])
+                         (default: {'MMRD': 0, 'P53ABN': 1, 'P53WT': 2, 'POLE': 3})
 
   --patch_pattern PATCH_PATTERN
-                        '/' separated words describing the directory structure of the patch paths. The words are 'annotation', 'subtype', 'slide', 'magnification'. A non-multiscale patch can be contained in a directory /path/to/patch/rootdir/Tumor/MMRD/VOA-1234/1_2.png so its patch_pattern is annotation/subtype/slide. A multiscale patch can be contained in a directory /path/to/patch/rootdir/Stroma/P53ABN/VOA-1234/10/3_400.png so its patch pattern is annotation/subtype/slide/magnification
+                        '/' separated words describing the directory structure of the patch paths. The words are ('annotation', 'subtype', 'slide', 'patch_size', 'magnification'). A non-multiscale patch can be contained in a directory /path/to/patch/rootdir/Tumor/MMRD/VOA-1234/1_2.png so its patch_pattern is annotation/subtype/slide. A multiscale patch can be contained in a directory /path/to/patch/rootdir/Stroma/P53ABN/VOA-1234/10/3_400.png so its patch pattern is annotation/subtype/slide/magnification
                          (default: annotation/subtype/slide)
 
   --chunk_file_location CHUNK_FILE_LOCATION
@@ -79,18 +116,20 @@ optional arguments:
                          (default: 0)
 
   --num_validation_batches NUM_VALIDATION_BATCHES
-                        Number of validation patches to use for model validation
+                        Number of validation batches to use for model validation. Default uses all validation batches for each validation loop.
                          (default: None)
 
-  --gpu_id GPU_ID       The ID of GPU to select. Default uses GPU with the most free memory
+  --gpu_id GPU_ID       The ID of GPU to select. Default uses GPU with the most free memory.
                          (default: None)
 
-  --seed SEED           seed for random shuffle
+  --seed SEED           Seed for random shuffle.
                          (default: 256)
 
-  --training_shuffle    Shuffle the training set
+  --training_shuffle    Shuffle the training set.
                          (default: False)
 
-  --validation_shuffle  Shuffle the validation set
+  --validation_shuffle  Shuffle the validation set.
                          (default: False)
+
+TODO: See JIRA tickets for updating docker_{train, evaluate}
 ```
