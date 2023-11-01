@@ -257,9 +257,9 @@ class ModelTrainer(object):
             setup_log_file(self.log_dir_location, self.train_instance_name)
         print(f'Instance name: {self.train_instance_name}')
         gpu_selector(self.gpu_id)
-        training_loader = create_data_loader(self.training_chunks,
+        training_loader = self.create_data_loader(self.training_chunks,
                 color_jitter=True, shuffle=self.training_shuffle)
-        validation_loader = create_data_loader(self.validation_chunks,
+        validation_loader = self.create_data_loader(self.validation_chunks,
                 shuffle=self.validation_shuffle)
         model = build_model(self.model_config)
         self.train(model, training_loader, validation_loader)
