@@ -134,7 +134,7 @@ class ModelTrainer(PatchHanger):
         self.validation_shuffle = config.validation_shuffle
 
         # early stopping parameters
-        self.early_stopping = not isinstance(config.subparser, type(None)) and  "early_stopping" in config.subparser and config.use_early_stopping
+        self.early_stopping = not isinstance(config.subparser, type(None)) and config.use_early_stopping
         if self.early_stopping:
             self.patience = config.patience
             self.delta = config.delta
@@ -151,9 +151,7 @@ class ModelTrainer(PatchHanger):
         self.slide_level_accuracy_threshold = config.slide_level_accuracy_threshold
         self.slide_level_accuracy_verbose = config.slide_level_accuracy_verbose
 
-
         self.best_model_state_dict = None
-
 
         if config.writer_log_dir_location:
             self.writer_log_dir_location = config.writer_log_dir_location
@@ -178,16 +176,19 @@ class ModelTrainer(PatchHanger):
                 raise ValueError("scheduler_step is not determined!")
             else:
                 self.scheduler = True
-                print("scheduler is selected!")
+                print("Scheduler is selected!")
         else:
             self.scheduler = False
-        # self.scheduler  = True if "scheduler" in self.model_config and self.scheduler_step is not None else False
-        self.use_freeze_training = config.use_freeze_training
-        self.freeze_epochs = config.freeze_epochs
-        self.unfreeze_epochs = config.unfreeze_epochs
-        self.base_lr = config.base_lr
-        self.lr_mult = config.lr_mult
-        self.use_scheduler = config.use_scheduler
+        # freeze training parameters
+        self.freeze_training = not isinstance(config.subparser, type(None)) and config.use_freeze_training
+        if self.freeze_training:
+            self.freeze_epochs = config.freeze_epochs
+            self.unfreeze_epochs = config.unfreeze_epochs
+            self.base_lr = config.base_lr
+            self.lr_mult = config.lr_mult
+            self.use_scheduler = config.use_scheduler
+            self.scheduler = True if self.use_scheduler else self.scheduler
+
         self.progressive_resizing = config.progressive_resizing
 
     def print_parameters(self):
@@ -226,10 +227,7 @@ class ModelTrainer(PatchHanger):
                 cur_label = cur_label.cuda()
                 logits, pred_prob, output = model.forward(cur_data)
                 val_loss += model.get_loss(logits, cur_label, output).item()
-                # if self.is_binary:
-                #     pred_labels += (pred_prob >=
-                #             0.5).type(torch.int).cpu().numpy().tolist()
-                # else:
+
                 pred_labels += torch.argmax(pred_prob,
                         dim=1).cpu().numpy().tolist()
                 gt_labels += cur_label.cpu().numpy().tolist()
@@ -364,10 +362,7 @@ class ModelTrainer(PatchHanger):
                 if (self.detailed_test_result):
                     for path_, pred_label_, true_label_, pred_prob_,cur_chunk_ in zip(cur_path, pred_label ,gt_label ,pred_prob, cur_chunk.cpu().numpy()) :
                         detailed_output_writer.writerow([path_, pred_label_, true_label_, pred_prob_, cur_chunk_])
-                    # print(f"{path_} Predicted:{pred_label_} True:{true_label_} Probability:{pred_prob_}")
 
-                # pred_probs = np.vstack((pred_probs, pred_prob)) if not self.is_binary else \
-                #         np.hstack((pred_probs, pred_prob))
         if self.detailed_test_result:
             detailed_output_file.close()
             if self.slide_level_accuracy:
@@ -486,9 +481,9 @@ class ModelTrainer(PatchHanger):
             print(f'\nEpoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
             print(f'Peak accuracy at iteration: {max_val_acc_idx}')
-            if self.scheduler:
-                print(f"Learning rate is {model.get_current_lr()}")
             self.writer.close()
+            if self.scheduler:
+                print(f"Learning rates are: Feature_extraction={model.get_current_lr(0)}, Classifier={model.get_current_lr(1)}")
         return max_val_acc
 
     def freeze_train(self, model, training_loader, validation_loader):
@@ -538,7 +533,7 @@ class ModelTrainer(PatchHanger):
                     print(f"\nTraining model with SIZE = {size}")
                 training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True, size=size)
                 validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle, size=size)
-                if not self.use_freeze_training:
+                if not self.freeze_training:
                     self.train(model, training_loader, validation_loader)
                 else:
                     self.freeze_train(model, training_loader, validation_loader)
