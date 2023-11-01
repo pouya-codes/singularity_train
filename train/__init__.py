@@ -379,7 +379,7 @@ class ModelTrainer(PatchHanger):
         self.compute_metric(gt_labels, pred_labels, pred_probs, self.CategoryEnum, verbose=True, is_binary=self.is_binary)
         print(f"{40 * '*'}")
 
-    def train(self, model, training_loader, validation_loader):
+    def train(self, model, training_loader, validation_loader, best_val_acc=None):
         """Runs the training loop
 
         Parameters
@@ -394,7 +394,7 @@ class ModelTrainer(PatchHanger):
             Loader for validation set.
         """
         iter_idx = -1
-        max_val_acc = float('-inf')
+        max_val_acc = float('-inf') if best_val_acc is None else best_val_acc
         max_val_acc_idx = -1
         intv_loss = 0
         pred_labels = []
@@ -405,9 +405,10 @@ class ModelTrainer(PatchHanger):
         if(self.early_stopping):
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
         self.validation_interval = len(training_loader) if self.validation_interval==-1 else self.validation_interval
-        val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
-        max_val_acc = val_acc
-        print(f'Before training, validation accuracy is {val_acc}, validation loss is {val_loss}!')
+        if best_val_acc is None:
+            val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
+            max_val_acc = val_acc
+            print(f'Before training, validation accuracy is {val_acc}, validation loss is {val_loss}!')
         ###################
         # train the model #
         ###################
@@ -487,6 +488,7 @@ class ModelTrainer(PatchHanger):
             if self.scheduler:
                 print(f"Learning rate is {model.get_current_lr()}")
             self.writer.close()
+        return max_val_acc
 
     def freeze_train(self, model, training_loader, validation_loader):
         """Runs the training loop
@@ -508,7 +510,7 @@ class ModelTrainer(PatchHanger):
         model.freeze()
         model.update_optimizer_schedular(self.base_lr, use_scheduler=self.use_scheduler,
                                          epoch=self.epochs, batch_per_epoch=len(training_loader))
-        self.train(model, training_loader, validation_loader)
+        best_val_acc = self.train(model, training_loader, validation_loader)
 
         # Unfreeze
         self.epochs = self.unfreeze_epochs
@@ -518,7 +520,7 @@ class ModelTrainer(PatchHanger):
         model.update_optimizer_schedular([self.base_lr/self.lr_mult, self.base_lr],
                                          use_scheduler=self.use_scheduler, epoch=self.epochs,
                                          batch_per_epoch=len(training_loader))
-        self.train(model, training_loader, validation_loader)
+        self.train(model, training_loader, validation_loader, best_val_acc=best_val_acc)
 
     def run(self):
         if self.train_model:
