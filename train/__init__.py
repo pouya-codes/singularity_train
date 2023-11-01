@@ -188,6 +188,7 @@ class ModelTrainer(PatchHanger):
         self.base_lr = config.base_lr
         self.lr_mult = config.lr_mult
         self.use_scheduler = config.use_scheduler
+        self.progressive_resizing = config.progressive_resizing
 
     def print_parameters(self):
         parameters = self.config.__dict__.copy()
@@ -506,7 +507,7 @@ class ModelTrainer(PatchHanger):
         """
         # Freeze
         self.epochs = self.freeze_epochs
-        print(f"Freezing model for {self.epochs} epochs ...")
+        print(f"\nFreezing model for {self.epochs} epochs ...")
         model.freeze()
         model.update_optimizer_schedular(self.base_lr, use_scheduler=self.use_scheduler,
                                          epoch=self.epochs, batch_per_epoch=len(training_loader))
@@ -515,7 +516,7 @@ class ModelTrainer(PatchHanger):
         # Unfreeze
         self.epochs = self.unfreeze_epochs
         self.base_lr /= 2
-        print(f"UnFreezing model for {self.epochs} epochs ...")
+        print(f"\nUnFreezing model for {self.epochs} epochs ...")
         model.unfreeze()
         model.update_optimizer_schedular([self.base_lr/self.lr_mult, self.base_lr],
                                          use_scheduler=self.use_scheduler, epoch=self.epochs,
@@ -531,12 +532,17 @@ class ModelTrainer(PatchHanger):
         gpu_devices = gpu_selector(self.gpu_id, self.number_of_gpus)
         model = self.build_model(gpu_devices, class_weight=self.class_weight)
         if (self.train_model) :
-            training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True)
-            validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
-            if not self.use_freeze_training:
-                self.train(model, training_loader, validation_loader)
-            else:
-                self.freeze_train(model, training_loader, validation_loader)
+            for size in self.progressive_resizing:
+                if size!=-1:
+                    print(f"\nTraining model with SIZE = {size}")
+                training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True, size=size)
+                validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle, size=size)
+                if not self.use_freeze_training:
+                    self.train(model, training_loader, validation_loader)
+                else:
+                    self.freeze_train(model, training_loader, validation_loader)
+            if size!=-1:
+                validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
             if self.best_model_state_dict:
                 model.model.load_state_dict(self.best_model_state_dict)
             self.test(model, validation_loader,'Validation')

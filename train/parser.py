@@ -90,6 +90,10 @@ def create_parser(parser):
                 default=[1],
                 help="Space separated number IDs specifying chunks to use for validation.")
 
+        parser.add_argument("--progressive_resizing", nargs="+", type=int,
+                default=[-1],
+                help="Space separated number of resizing.")
+
         parser.add_argument("--is_binary", action='store_true',
                 help="Whether we want to categorize patches by the Tumor/Normal category (true) "
                 "or by the subtype category (false).")
