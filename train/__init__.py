@@ -566,7 +566,8 @@ class ModelTrainer(PatchHanger):
         if self.testing_model:
             setup_log_file(self.test_log_dir_location, self.instance_name)
         self.print_parameters()
-        gpu_devices = gpu_selector(self.gpu_id, self.number_of_gpus)
+        # gpu_devices = gpu_selector(self.gpu_id, self.number_of_gpus)
+        gpu_devices = None
         model = self.build_model(gpu_devices, class_weight=self.class_weight)
         if (self.train_model) :
             for size in self.progressive_resizing:
