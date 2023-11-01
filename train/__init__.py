@@ -4,6 +4,7 @@ import time
 import sys
 import enum
 
+import yaml
 from tqdm import tqdm
 from pynvml import *
 import numpy as np
@@ -12,73 +13,62 @@ import torchvision
 from sklearn.metrics import accuracy_score
 from torch.utils.data import Dataset, DataLoader
 
-import train.utils as utils
-from train.utils.subtype_enum import BinaryEnum
-from train.patch_dataset import PatchDataset
-import train.aim_logger as aim_logger
-import train.aim_models as aim_models
+import submodule_utils as utils
+from submodule_cv import (ChunkLookupException, setup_log_file,
+    gpu_selector, PatchHanger)
 
 # Folder permission mode
 p_mode = 0o777
 oldmask = os.umask(000)
 nvmlInit()
 
-class ChunkLookupException(Exception):
-    pass
+class ModelTrainer(PatchHanger):
+    '''Trains a model
+    
+    Attributes
+    ----------
+    experiment_name : str
+        Experiment name
+    
+    train_instance_name : str
+        Generated instance name based on experiment name
 
-def build_model(model_config):
-    return aim_models.DeepModel(model_config)
+    batch_size : int
+        Batch size to use on training, validation and test dataset
 
-def setup_log_file(log_folder_path, log_name):
-    os.makedirs(log_folder_path, exist_ok=True)
-    l_path = os.path.join(log_folder_path, "log_{}.txt".format(log_name))
-    sys.stdout = aim_logger.Logger(l_path)
-
-def gpu_selector(gpu_to_use=-1):
-    gpu_to_use = -1 if gpu_to_use == None else gpu_to_use
-    deviceCount = nvmlDeviceGetCount()
-    if gpu_to_use < 0:
-        print("Auto selecting GPU") 
-        gpu_free_mem = 0
-        for i in range(deviceCount):
-            handle = nvmlDeviceGetHandleByIndex(i)
-            mem_usage = nvmlDeviceGetMemoryInfo(handle)
-            if gpu_free_mem < mem_usage.free:
-                gpu_to_use = i
-                gpu_free_mem = mem_usage.free
-            print("GPU: {} \t Free Memory: {}".format(i, mem_usage.free))
-    print("Using GPU {}".format(gpu_to_use))
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_to_use)
-    return gpu_to_use
-
-class ModelTrainer(object):
-
-    @classmethod
-    def create_patch_pattern(cls, patch_pattern):
-        if type(patch_pattern) is str:
-            patch_pattern = patch_pattern.split('/')
-        return {k: i for i,k in enumerate(patch_pattern)}
-
-    @classmethod
-    def create_category_enum(cls, is_binary, subtypes=None):
-        '''Create CategoryEnum
-
-        Parameters
-        ----------
-        is_binary : bool
-        subtypes : None or list
-
-        Returns
-        -------
-        enum.Enum
-        '''
-        if is_binary:
-            return BinaryEnum
-        else:
-            if subtypes:
-                return enum.Enum('SubtypeEnum', subtypes)
-            else:
-                raise NotImplementedError('create_category_enum: is_binary is True and no subtypes given')
+    validation_interval : int
+        The interval of the training loop to start validating model
+    
+    epochs : int
+        The number of epochs to run model training on training dataset
+    
+    TODO: finish attributes
+    training_chunks
+    self.validation_chunks = validation_chunks
+    self.is_binary = is_binary
+    self.CategoryEnum = utils.create_category_enum(
+            self.is_binary, subtypes)
+    self.patch_pattern = utils.create_patch_pattern(patch_pattern)
+    self.chunk_file_location = chunk_file_location
+    self.log_dir_location = log_dir_location
+    self.model_dir_location = model_dir_location
+    self.model_config_location = model_config_location
+    self.model_config = self.load_model_config()
+    # optional
+    self.patch_location = patch_location # unused
+    self.num_patch_workers = num_patch_workers
+    self.num_validation_batches = num_validation_batches
+    self.gpu_id = gpu_id
+    self.seed = seed
+    self.training_shuffle = training_shuffle
+    self.validation_shuffle = validation_shuffle
+    # raw
+    self.raw_subtypes = subtypes
+    self.raw_patch_pattern = patch_pattern
+    # model_file_location
+    self.model_file_location = os.path.join(self.model_dir_location,
+            f'{self.train_instance_name}.pth')
+    '''
 
     def __init__(self,
             experiment_name,
@@ -123,9 +113,9 @@ class ModelTrainer(object):
         self.training_chunks = training_chunks
         self.validation_chunks = validation_chunks
         self.is_binary = is_binary
-        self.CategoryEnum = self.create_category_enum(
+        self.CategoryEnum = utils.create_category_enum(
                 self.is_binary, subtypes)
-        self.patch_pattern = self.create_patch_pattern(patch_pattern)
+        self.patch_pattern = utils.create_patch_pattern(patch_pattern)
         self.chunk_file_location = chunk_file_location
         self.log_dir_location = log_dir_location
         self.model_dir_location = model_dir_location
@@ -140,7 +130,7 @@ class ModelTrainer(object):
         self.training_shuffle = training_shuffle
         self.validation_shuffle = validation_shuffle
         # raw
-        self.raw_subtypes = self.category_to_arguments(self.CategoryEnum)
+        self.raw_subtypes = subtypes
         self.raw_patch_pattern = patch_pattern
         # model_file_location
         self.model_file_location = os.path.join(self.model_dir_location,
@@ -186,65 +176,6 @@ class ModelTrainer(object):
         print('---') # begin YAML
         print(payload)
         print('...') # end YAML
-
-    def load_model_config(self):
-        with open(self.model_config_location) as f:
-            return json.load(f)
-
-    def load_chunks(self, chunk_ids):
-        """Load patch paths from specified chunks in chunk file
-
-        Parameters
-        ----------
-        chunks : list of int
-            The IDs of chunks to retrieve patch paths from
-
-        Returns
-        -------
-        list of str
-            Patch paths from the chunks
-        """
-        patch_paths = []
-        with open(self.chunk_file_location) as f:
-            data = json.load(f)
-            chunks = data['chunks']
-            for chunk in data['chunks']:
-                if chunk['id'] in chunk_ids:
-                    patch_paths.extend(chunk['imgs'])
-        if len(patch_paths) == 0:
-            raise ChunkLookupException(
-                    f"chunks {tuple(chunk_ids)} not found in {self.chunk_file_location}")
-        return patch_paths
-        
-    def extract_label_from_patch(self, patch_path):
-        """Get the label value according to CategoryEnum from the patch path
-
-        Parameters
-        ----------
-        patch_path : str
-
-        Returns
-        -------
-        int
-            The label id for the patch
-        """
-        '''
-        Returns the CategoryEnum
-        '''
-        patch_id = utils.create_patch_id(patch_path, self.patch_pattern)
-        label = utils.get_label_by_patch_id(patch_id, self.patch_pattern,
-                self.CategoryEnum, is_binary=self.is_binary)
-        return label.value
-
-    def extract_labels(self, patch_paths):
-        return list(map(self.extract_label_from_patch, patch_paths))
-
-    def create_data_loader(self, chunk_ids, color_jitter=False, shuffle=False):
-        patch_paths = self.load_chunks(chunk_ids)
-        labels = self.extract_labels(patch_paths)
-        patch_dataset = PatchDataset(patch_paths, labels, color_jitter=color_jitter)
-        return DataLoader(patch_dataset, batch_size=self.batch_size, 
-                shuffle=shuffle, num_workers=self.num_patch_workers)
 
     def validate(self, model, validation_loader):
         pred_labels = []
@@ -305,5 +236,5 @@ class ModelTrainer(object):
                 color_jitter=True, shuffle=self.training_shuffle)
         validation_loader = self.create_data_loader(self.validation_chunks,
                 shuffle=self.validation_shuffle)
-        model = build_model(self.model_config)
+        model = self.build_model()
         self.train(model, training_loader, validation_loader)

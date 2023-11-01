@@ -1,46 +1,14 @@
 import argparse
-import os
+
+from submodule_utils import (BALANCE_PATCHES_OPTIONS, DATASET_ORIGINS)
+from submodule_utils.arguments import (dir_path, file_path, dataset_origin,
+        dict_vals, make_subtype_dict, balance_patches_options,
+        CustomHelpFormatter)
+
 from train import ModelTrainer
 
 description=None
 epilog=None
-
-def dir_path(s):
-    if os.path.isdir(s):
-        return s
-    else:
-        raise argparse.ArgumentTypeError(f"readable_dir:{s} is not a valid path")
-
-def file_path(s):
-    if os.path.isfile(s):
-        return s
-    else:
-        raise argparse.ArgumentTypeError(f"readable_file:{s} is not a valid path")
-
-def dict_vals(kv):
-    try:
-        k, v = kv.split("=")
-    except:
-        raise argparse.ArgumentTypeError(f"value {kv} is not separated by one '='")
-    try:
-        v = int(v)
-    except:
-        raise argparse.ArgumentTypeError(f"right side of {kv} should be int")
-    return (k, v)
-
-def make_subtype_dict(ll):
-    return {k: v for (k, v) in ll}
-
-class CustomHelpFormatter(
-        argparse.RawTextHelpFormatter, 
-        argparse.ArgumentDefaultsHelpFormatter):
-    def add_argument(self, action):
-        action.help += '\n'
-        super().add_argument(action)
-
-    def _format_action(self, action):
-        s = super()._format_action(action)
-        return s + '\n'
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
