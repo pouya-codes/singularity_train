@@ -190,14 +190,13 @@ class ModelTrainer(PatchHanger):
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
                 _, pred_prob, _ = model.forward(cur_data)
-                if self.is_binary:
-                    pred_labels += (pred_prob >=
-                            0.5).type(torch.int).cpu().numpy().tolist()
-                else:
-                    pred_labels += torch.argmax(pred_prob,
-                            dim=1).cpu().numpy().tolist()
+                # if self.is_binary:
+                #     pred_labels += (pred_prob >=
+                #             0.5).type(torch.int).cpu().numpy().tolist()
+                # else:
+                pred_labels += torch.argmax(pred_prob,
+                        dim=1).cpu().numpy().tolist()
                 gt_labels += cur_label.cpu().numpy().tolist()
-                
         model.model.train()
         return accuracy_score(gt_labels, pred_labels)
 
