@@ -24,7 +24,7 @@ from copy import deepcopy
 
 import submodule_utils as utils
 from submodule_cv import (ChunkLookupException, setup_log_file,
-    gpu_selector, PatchHanger, EarlyStopping)
+    gpu_selector, PatchHanger, EarlyStopping, mixup_data)
 
 class ModelTrainer(PatchHanger):
     """Trains a model
@@ -166,8 +166,11 @@ class ModelTrainer(PatchHanger):
         self.model_file_location = os.path.join(self.model_dir_location,
                 f'{self.instance_name}.pth')
         self.config = config
+        #########
+        # Amirali
         self.class_weight = self.model_config["use_weighted_loss"]["weight"] if \
             self.model_config["use_weighted_loss"]["use_weighted_loss"] else None
+        self.MixUp = True if 'mix_up' in self.model_config and self.model_config['mix_up']['mix_up'] else False
 
     def print_parameters(self):
         parameters = self.config.__dict__.copy()
@@ -379,7 +382,8 @@ class ModelTrainer(PatchHanger):
         intv_loss = 0
         pred_labels = []
         gt_labels = []
-
+        if self.MixUp:
+            gt_labels_mixed = []
         # initialize the early_stopping object
         if(self.early_stopping):
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
@@ -397,15 +401,27 @@ class ModelTrainer(PatchHanger):
                 batch_data, batch_labels,_,_ = data
                 batch_data = batch_data.cuda()
                 batch_labels = batch_labels.cuda()
+                if self.MixUp:
+                    batch_data, batch_labels_mixed, lam = mixup_data(batch_data, batch_labels)
                 logits, probs, output = model.forward(batch_data)
-                model.optimize_parameters(logits, batch_labels, output)
+                if self.MixUp:
+                    model.optimize_parameters(logits, batch_labels, output,
+                                              batch_labels_mixed, lam)
+                else:
+                    model.optimize_parameters(logits, batch_labels, output)
                 intv_loss += model.get_current_errors()
                 pred_labels += torch.argmax(probs,
                         dim=1).cpu().numpy().tolist()
                 gt_labels += batch_labels.cpu().numpy().tolist()
+                if self.MixUp:
+                    gt_labels_mixed += batch_labels_mixed.cpu().numpy().tolist()
                 if iter_idx % self.validation_interval == self.validation_interval-1:
                     val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
-                    train_acc = accuracy_score(gt_labels, pred_labels)
+                    if self.MixUp:
+                        train_acc = lam * accuracy_score(gt_labels, pred_labels) + \
+                                    (1-lam) * accuracy_score(gt_labels_mixed, pred_labels)
+                    else:
+                        train_acc = accuracy_score(gt_labels, pred_labels)
                     self.writer.add_scalars(f"{self.instance_name}/loss",
                             {
                                 'validation': val_loss,
@@ -422,6 +438,8 @@ class ModelTrainer(PatchHanger):
                     intv_loss = 0
                     pred_labels = []
                     gt_labels = []
+                    if self.MixUp:
+                        gt_labels_mixed = []
                     if max_val_acc <= val_acc:
                         max_val_acc = val_acc
                         max_val_acc_idx = iter_idx
