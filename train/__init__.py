@@ -4,6 +4,7 @@ import time
 import sys
 import enum
 
+from tqdm import tqdm
 from pynvml import *
 import numpy as np
 import torch
