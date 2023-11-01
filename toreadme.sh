@@ -54,10 +54,16 @@ Model definition and augmentations are defined in the \`config.json\` file. It i
 3.3. \`rotation\`: {"true","false"} -> if true, add 20 degree rotation to the augmentation list.
 3.3. \`crop\`: {int} -> if set, add crop of determied size to the augmentation list.
 3.3. \`resize\`: {int} -> if set, add resize of determied size to the augmentation list.
-3.4. \`cut_out\`:
-3.4.1. \`num_cut\`: {int} -> number of cutouts
-3.4.2. \`size_cut\`: {int} -> size of each cutout in pixels
-3.4.3. \`color_cut\`: {"white","black"} -> the color of cutouts
+3.4. \`size_jitter\`:
+3.4.1. \`use_size_jitter\`: {"true","false"} -> if true, add size_jitter to the augmentation list.
+3.4.2. \`percentage\`: {float} -> ratio of the original image size
+3.4.3. \`probability\`: {float} -> probability of doing this augmentation
+3.4.4. \`color\`: {"white","black"} -> the color of padding when use ratio less than 1.
+3.5. \`cut_out\`:
+3.5.1. \`use_num_cut\`: {"true","false"} -> if true, add num_cut to the augmentation list.
+3.5.2. \`num_cut\`: {int} -> number of cutouts
+3.5.3. \`size_cut\`: {int} -> size of each cutout in pixels
+3.5.4. \`color_cut\`: {"white","black"} -> the color of cutouts
 4. \`use_weighted_loss\`:
 4.1. \`use_weighted_loss\`: {"true","false"} -> if true, use weighted loss.
 4.2. \`weight\`: {array of floats} -> weights used for each class in the loss

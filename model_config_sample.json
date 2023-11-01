@@ -12,15 +12,22 @@
         "std" : [ 0.1685, 0.2008, 0.1439 ]
     },
     "augmentation" : {
-        "use_augmentation": false,
-        "flip": true,
-        "color_jitter": true,
-        "rotation": true,
-        "cut_out": {
-            "num_cut": 2,
-            "size_cut": 50,
-            "color_cut": "black"
-        }
+      "use_augmentation": true,
+      "flip": true,
+      "color_jitter": false,
+      "rotation": false,
+      "size_jitter": {
+          "use_size_jitter": false,
+          "percentage": 1.2,
+          "probability": 0.7,
+          "color": "white"
+      },
+      "cut_out": {
+          "use_cut_out": false,
+          "num_cut": 2,
+          "size_cut": 100,
+          "color_cut": "white"
+      }
     },
     "use_weighted_loss" : {
         "use_weighted_loss" : false,
