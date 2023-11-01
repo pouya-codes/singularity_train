@@ -200,7 +200,7 @@ class ModelTrainer(PatchHanger):
                 if self.num_validation_batches is not None \
                         and val_idx >= self.num_validation_batches:
                     break
-                cur_data, cur_label, _ = data
+                cur_data, cur_label,_ ,_ = data
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
                 logits, pred_prob, output = model.forward(cur_data)
@@ -307,7 +307,7 @@ class ModelTrainer(PatchHanger):
         if (self.detailed_test_result) :
             detailed_output_file = open(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'), 'w')
             detailed_output_writer = csv.writer(detailed_output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            detailed_output_writer.writerow(["path", "predicted_label", "target_label", "probability"])
+            detailed_output_writer.writerow(["path", "predicted_label", "target_label", "probability","chunk"])
 
 
         pred_labels = []
@@ -322,7 +322,7 @@ class ModelTrainer(PatchHanger):
             prefix = 'Testing: '
             for data in tqdm(test_loader, desc=prefix,
                     dynamic_ncols=True, leave=True, position=0):
-                cur_data, cur_label, cur_path = data
+                cur_data, cur_label, cur_path, cur_chunk = data
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
                 _, pred_prob, _ = model.forward(cur_data)
@@ -341,8 +341,8 @@ class ModelTrainer(PatchHanger):
                 pred_probs = np.vstack((pred_probs, pred_prob))
 
                 if (self.detailed_test_result):
-                    for path_, pred_label_, true_label_, pred_prob_ in zip(cur_path, pred_label ,gt_label ,pred_prob) :
-                        detailed_output_writer.writerow([path_, pred_label_, true_label_, pred_prob_])
+                    for path_, pred_label_, true_label_, pred_prob_,cur_chunk_ in zip(cur_path, pred_label ,gt_label ,pred_prob, cur_chunk.cpu().numpy()) :
+                        detailed_output_writer.writerow([path_, pred_label_, true_label_, pred_prob_, cur_chunk_])
                     # print(f"{path_} Predicted:{pred_label_} True:{true_label_} Probability:{pred_prob_}")
 
                 # pred_probs = np.vstack((pred_probs, pred_prob)) if not self.is_binary else \
@@ -392,7 +392,7 @@ class ModelTrainer(PatchHanger):
             for data in tqdm(training_loader, desc=prefix,
                     dynamic_ncols=True, leave=True, position=0):
                 iter_idx += 1
-                batch_data, batch_labels,_ = data
+                batch_data, batch_labels,_,_ = data
                 batch_data = batch_data.cuda()
                 batch_labels = batch_labels.cuda()
                 logits, probs, output = model.forward(batch_data)
