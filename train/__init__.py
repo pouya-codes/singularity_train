@@ -214,7 +214,7 @@ class ModelTrainer(PatchHanger):
                 if self.num_validation_batches is not None \
                         and val_idx >= self.num_validation_batches:
                     break
-                cur_data, cur_label = data
+                cur_data, cur_label, _ = data
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
                 logits, pred_prob, output = model.forward(cur_data)
@@ -255,7 +255,7 @@ class ModelTrainer(PatchHanger):
             for data in tqdm(training_loader, desc=prefix, 
                     dynamic_ncols=True, leave=True, position=0):
                 iter_idx += 1
-                batch_data, batch_labels = data
+                batch_data, batch_labels,_ = data
                 batch_data = batch_data.cuda()
                 batch_labels = batch_labels.cuda()
                 logits, probs, output = model.forward(batch_data)
@@ -292,14 +292,18 @@ class ModelTrainer(PatchHanger):
             print(f'Peach accuracy at iteration: {max_val_acc_idx}')
             self.writer.close()
 
+    def build_model(self):
+        model = super().build_model()
+        print(model.model)
+        return model
+
+
     def run(self):
         setup_log_file(self.log_dir_location, self.train_instance_name)
         self.print_parameters()
         print(f'Instance name: {self.train_instance_name}')
         gpu_selector(self.gpu_id)
-        training_loader = self.create_data_loader(self.training_chunks,
-                color_jitter=True, shuffle=self.training_shuffle)
-        validation_loader = self.create_data_loader(self.validation_chunks,
-                shuffle=self.validation_shuffle)
+        training_loader = self.create_data_loader(self.training_chunks, color_jitter=True, shuffle=self.training_shuffle)
+        validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
         model = self.build_model()
         self.train(model, training_loader, validation_loader)
