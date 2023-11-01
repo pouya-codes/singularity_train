@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name train
 #SBATCH --cpus-per-task 4
-#SBATCH --output /home/poahmadvand/ml/slurm/train_%j.out
+#SBATCH --output2 /home/poahmadvand/ml/slurm/train_%j.out
 #SBATCH --error /home/poahmadvand/ml/slurm/train_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=pouya.ahmadvand@gmail.com

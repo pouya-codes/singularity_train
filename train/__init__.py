@@ -6,6 +6,7 @@ import enum
 import csv
 
 import yaml, random
+from submodule_utils.accuracy.slide_level_accuracy import SlideLevelAccuracy
 from tqdm import tqdm
 from pynvml import *
 import numpy as np
@@ -146,6 +147,11 @@ class ModelTrainer(PatchHanger):
         self.testing_shuffle = config.testing_shuffle
         self.test_chunks = config.test_chunks
         self.seed = config.seed
+        self.slide_level_accuracy = config.calculate_slide_level_accuracy
+        self.slide_level_accuracy_threshold = config.slide_level_accuracy_threshold
+        self.slide_level_accuracy_verbose = config.slide_level_accuracy_verbose
+
+
         self.best_model_state_dict = None
 
 
@@ -160,7 +166,8 @@ class ModelTrainer(PatchHanger):
         self.model_file_location = os.path.join(self.model_dir_location,
                 f'{self.instance_name}.pth')
         self.config = config
-        self.class_weight = self.model_config["use_weighted_loss"]["weight"]
+        self.class_weight = self.model_config["use_weighted_loss"]["weight"] if \
+            self.model_config["use_weighted_loss"]["use_weighted_loss"] else None
 
     def print_parameters(self):
         parameters = self.config.__dict__.copy()
@@ -193,7 +200,7 @@ class ModelTrainer(PatchHanger):
                 if self.num_validation_batches is not None \
                         and val_idx >= self.num_validation_batches:
                     break
-                cur_data, cur_label, _ = data
+                cur_data, cur_label,_ ,_ = data
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
                 logits, pred_prob, output = model.forward(cur_data)
@@ -250,7 +257,7 @@ class ModelTrainer(PatchHanger):
                 print('Warning:', e)
                 overall_auc = 0.00
         else:
-            overall_auc = roc_auc_score(labels, preds, average='macro')
+            overall_auc = roc_auc_score(labels, probs[:, 1], average='macro')
         # disply results
         if verbose:
             print('Acc: {:.2f}\%'.format(overall_acc * 100))
@@ -300,7 +307,7 @@ class ModelTrainer(PatchHanger):
         if (self.detailed_test_result) :
             detailed_output_file = open(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'), 'w')
             detailed_output_writer = csv.writer(detailed_output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            detailed_output_writer.writerow(["path", "predicted_label", "target_label", "probability"])
+            detailed_output_writer.writerow(["path", "predicted_label", "target_label", "probability","chunk"])
 
 
         pred_labels = []
@@ -315,7 +322,7 @@ class ModelTrainer(PatchHanger):
             prefix = 'Testing: '
             for data in tqdm(test_loader, desc=prefix,
                     dynamic_ncols=True, leave=True, position=0):
-                cur_data, cur_label, cur_path = data
+                cur_data, cur_label, cur_path, cur_chunk = data
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
                 _, pred_prob, _ = model.forward(cur_data)
@@ -334,14 +341,20 @@ class ModelTrainer(PatchHanger):
                 pred_probs = np.vstack((pred_probs, pred_prob))
 
                 if (self.detailed_test_result):
-                    for path_, pred_label_, true_label_, pred_prob_ in zip(cur_path, pred_label ,gt_label ,pred_prob) :
-                        detailed_output_writer.writerow([path_, pred_label_, true_label_, pred_prob_])
+                    for path_, pred_label_, true_label_, pred_prob_,cur_chunk_ in zip(cur_path, pred_label ,gt_label ,pred_prob, cur_chunk.cpu().numpy()) :
+                        detailed_output_writer.writerow([path_, pred_label_, true_label_, pred_prob_, cur_chunk_])
                     # print(f"{path_} Predicted:{pred_label_} True:{true_label_} Probability:{pred_prob_}")
 
                 # pred_probs = np.vstack((pred_probs, pred_prob)) if not self.is_binary else \
                 #         np.hstack((pred_probs, pred_prob))
-        if (self.detailed_test_result):
+        if self.detailed_test_result:
             detailed_output_file.close()
+            if self.slide_level_accuracy:
+                detailed_results = open(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'))
+                slide_level= SlideLevelAccuracy(csv.reader(detailed_results),self.patch_pattern,self.CategoryEnum,self.slide_level_accuracy_threshold,self.slide_level_accuracy_verbose)
+                slide_level.calculate_slide_level_accuracy()
+
+
         print(f"{tag} Results:\n{40 * '*'}")
         self.compute_metric(gt_labels, pred_labels, pred_probs, self.CategoryEnum, verbose=True, is_binary=self.is_binary)
         print(f"{40 * '*'}")
@@ -381,7 +394,7 @@ class ModelTrainer(PatchHanger):
             for data in tqdm(training_loader, desc=prefix,
                     dynamic_ncols=True, leave=True, position=0):
                 iter_idx += 1
-                batch_data, batch_labels,_ = data
+                batch_data, batch_labels,_,_ = data
                 batch_data = batch_data.cuda()
                 batch_labels = batch_labels.cuda()
                 logits, probs, output = model.forward(batch_data)

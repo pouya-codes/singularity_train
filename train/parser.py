@@ -192,6 +192,8 @@ def create_parser(parser):
                 help="Provides deatailed test results, including paths to image files, predicted label, target label, probabilities of classes"
                 "Default uses False")
 
+
+
         subparser_parameters.add_argument("--testing_shuffle", action='store_true',
                             help="Shuffle the testing set."
                                  "Default uses False")
@@ -199,6 +201,23 @@ def create_parser(parser):
         subparser_parameters.add_argument("--test_chunks", nargs="+", type=int,
                 default=[2],
                 help="Space separated number IDs specifying chunks to use for testing.")
+
+        subparsers.add_parser("slide_level_accuracy")
+
+        subparser_parameters.add_argument("--calculate_slide_level_accuracy", type=str2bool, nargs='?',
+                        const=True, default=False, required=False,
+                help="Weather calculate slide level accuracy"
+                "Default uses False")
+
+        subparser_parameters.add_argument("--slide_level_accuracy_threshold", type=float, default=0, required=False,
+                help="Minimum threshold that the patch labels probabilities should pass to be considered in the slide level voting."
+                "Default: 1/number_of_classes")
+
+        subparser_parameters.add_argument("--slide_level_accuracy_verbose", type=str2bool, nargs='?',
+                        const=True, default=False, required=False,
+                help="Verbose the detail for slide level accuracy"
+                "Default uses False")
+
 
 
 def get_args():
