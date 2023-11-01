@@ -1,0 +1,17 @@
+{
+    "num_subtypes" : 10,
+    "deep_model" : "vgg16_bn",
+    "use_weighted_loss" : false,
+    "continue_train" : false,
+    "parameters" : {
+        "pretrained" : true
+    },
+    "optimizer" : {
+        "type" : "Adam",
+        "parameters" : {
+            "lr" : 0.00001,
+            "amsgrad" : true,
+            "weight_decay" : 0.0005
+        }
+    }
+}

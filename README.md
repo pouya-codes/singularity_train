@@ -3,7 +3,7 @@
 ## Usage
 
 ```
-usage: app.py [-h] --experiment_name EXPERIMENT_NAME --batch_size BATCH_SIZE
+usage: app.py [-h] [from-experiment-manifest path/to/experiment-manifest-file, from-arguments --experiment_name EXPERIMENT_NAME --batch_size BATCH_SIZE
               --validation_interval VALIDATION_INTERVAL --epochs EPOCHS
               [--training_chunks TRAINING_CHUNKS [TRAINING_CHUNKS ...]]
               [--validation_chunks VALIDATION_CHUNKS [VALIDATION_CHUNKS ...]]
@@ -15,7 +15,7 @@ usage: app.py [-h] --experiment_name EXPERIMENT_NAME --batch_size BATCH_SIZE
               [--num_patch_workers NUM_PATCH_WORKERS]
               [--num_validation_batches NUM_VALIDATION_BATCHES]
               [--gpu_id GPU_ID] [--seed SEED] [--training_shuffle]
-              [--validation_shuffle]
+              [--validation_shuffle]]
 
 Trains a model for patch classification. This process does the training in the following manner:
 

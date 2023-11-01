@@ -1,0 +1,22 @@
+try_me:
+    experiment_name: local_test
+    batch_size: 32
+    validation_interval: 50
+    epochs: 10
+    subtypes:
+      - airplane=0
+      - automobile=1
+      - bird=2
+      - cat=3
+      - deer=4
+      - dog=5
+      - frog=6
+      - horse=7
+      - ship=8
+      - truck=9
+    chunk_file_location: /home/pouya/Develop/train_test/dataset/split.1_train_2_3_eval.json
+    log_dir_location: /home/pouya/Develop/train_test/dataset/logs/train
+    model_dir_location: /home/pouya/Develop/train_test/dataset/weights
+    model_config_location: /home/pouya/Develop/train_test/dataset/vgg19_10c_bn__n2__adam__lr_0_0002.json
+    patch_location: /home/pouya/Develop/train_test/dataset/train
+    num_patch_workers: 3
