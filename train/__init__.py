@@ -121,6 +121,7 @@ class ModelTrainer(PatchHanger):
         self.chunk_file_location = config.chunk_file_location
         self.log_dir_location = config.log_dir_location
         self.model_dir_location = config.model_dir_location
+        self.save_model_for_export = config.save_model_for_export
         self.model_config_location = config.model_config_location
         self.model_config = self.load_model_config()
         # optional
@@ -408,6 +409,8 @@ class ModelTrainer(PatchHanger):
                         model.save_state(self.model_dir_location,
                                 self.instance_name,
                                 iter_idx, epoch)
+                        if (self.save_model_for_export):
+                            torch.save(model,os.path.join(self.model_dir_location,"export_",self.instance_name,".pt"))
                         # store best state of model for testing
                         self.best_model_state_dict = deepcopy(model.model.state_dict())
                     if (self.early_stopping):

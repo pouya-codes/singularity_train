@@ -40,6 +40,7 @@ description="""Trains a model for patch classification. This process does the tr
         "mean" : [ 0.485, 0.456, 0.406 ],
         "std" : [ 0.229, 0.224, 0.225 ]
     },
+    "augmentation" : true,
     "parameters" : {
         "pretrained" : true
     },
@@ -119,6 +120,9 @@ def create_parser(parser):
 
         parser.add_argument("--model_dir_location", type=dir_path, required=True,
                 help="Path to model directory to save trained model (i.e. /path/to/model/).")
+
+        parser.add_argument("--save_model_for_export", action='store_true',
+                help="Whether we want to save the entire model for export")
 
         parser.add_argument("--model_config_location", type=str, required=True,
                 help="Path to model config JSON (i.e. /path/to/model_config.json).")

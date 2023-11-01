@@ -8,7 +8,7 @@
 
 ```
 Date Created: 22 July 2020
-Last Update: Fri Sep 25 12:21:32 PDT 2020 by poahmadvand
+Last Update: Fri Dec  4 15:24:45 PST 2020 by pouya
 Developer: Colin Chen
 Version: 1.0
 ```
@@ -65,6 +65,7 @@ Trains a model for patch classification. This process does the training in the f
         "mean" : [ 0.485, 0.456, 0.406 ],
         "std" : [ 0.229, 0.224, 0.225 ]
     },
+    "augmentation" : true,
     "parameters" : {
         "pretrained" : true
     },
@@ -114,7 +115,8 @@ usage: app.py from-arguments [-h] --experiment_name EXPERIMENT_NAME
                              --chunk_file_location CHUNK_FILE_LOCATION
                              --log_dir_location LOG_DIR_LOCATION
                              --model_dir_location MODEL_DIR_LOCATION
-                             --model_config_location MODEL_CONFIG_LOCATION
+                             [--save_model_for_export] --model_config_location
+                             MODEL_CONFIG_LOCATION
                              [--num_patch_workers NUM_PATCH_WORKERS]
                              [--num_validation_batches NUM_VALIDATION_BATCHES]
                              [--gpu_id GPU_ID]
@@ -178,6 +180,10 @@ optional arguments:
   --model_dir_location MODEL_DIR_LOCATION
                         Path to model directory to save trained model (i.e. /path/to/model/).
                          (default: None)
+
+  --save_model_for_export
+                        Whether we want to save the entire model for export
+                         (default: False)
 
   --model_config_location MODEL_CONFIG_LOCATION
                         Path to model config JSON (i.e. /path/to/model_config.json).
