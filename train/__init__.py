@@ -27,12 +27,12 @@ from submodule_cv import (ChunkLookupException, setup_log_file,
 
 class ModelTrainer(PatchHanger):
     """Trains a model
-    
+
     Attributes
     ----------
     experiment_name : str
         Experiment name
-    
+
     instance_name : str
         Generated instance name based on experiment name
 
@@ -41,10 +41,10 @@ class ModelTrainer(PatchHanger):
 
     validation_interval : int
         The interval of the training loop to start validating model
-    
+
     epochs : int
         The number of epochs to run model training on training dataset
-    
+
     training_chunks : list of int
         Space separated number IDs specifying chunks to use for training.
 
@@ -71,23 +71,23 @@ class ModelTrainer(PatchHanger):
     model_dir_location
 
     model_config_location
-    
+
     model_config : dict
 
     num_patch_workers
-    
+
     num_validation_batches
 
     gpu_id : int
-    
+
     seed : int
-    
+
     training_shuffle : bool
-    
+
     validation_shuffle : bool
 
     raw_subtypes : dict
-    
+
     raw_patch_pattern : str
 
     model_file_location : str
@@ -161,6 +161,7 @@ class ModelTrainer(PatchHanger):
         self.model_file_location = os.path.join(self.model_dir_location,
                 f'{self.instance_name}.pth')
         self.config = config
+        self.class_weight = self.model_config["use_weighted_loss"]["weight"]
 
     def print_parameters(self):
         parameters = self.config.__dict__.copy()
@@ -353,7 +354,7 @@ class ModelTrainer(PatchHanger):
         ----------
         model : torch.nn.Module
             Model to train
-        
+
         training_loader : torch.DataLoader
             Loader for training set.
 
@@ -376,7 +377,7 @@ class ModelTrainer(PatchHanger):
         ###################
         for epoch in range(self.epochs):
             prefix = f'Training Epoch {epoch}: '
-            for data in tqdm(training_loader, desc=prefix, 
+            for data in tqdm(training_loader, desc=prefix,
                     dynamic_ncols=True, leave=True, position=0):
                 iter_idx += 1
                 batch_data, batch_labels,_ = data
@@ -436,7 +437,7 @@ class ModelTrainer(PatchHanger):
             setup_log_file(self.test_log_dir_location, self.instance_name)
         self.print_parameters()
         gpu_devices = gpu_selector(self.gpu_id, self.number_of_gpus)
-        model = self.build_model(gpu_devices)
+        model = self.build_model(gpu_devices, class_weight=self.class_weight)
         if (self.train_model) :
             training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle, training_set=True, weighted_sampler=self.weighted_sampler)
             validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
