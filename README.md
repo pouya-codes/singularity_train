@@ -157,5 +157,30 @@ optional arguments:
   --validation_shuffle  Shuffle the validation set.
                          (default: False)
 
+  --use_early_stopping  Use EarlyStopping.
+                         (Default uses False)
+
+  --patience            How long to wait after last time validation loss improved.
+                         (Default: 7)
+
+  --delta               Minimum change in the monitored quantity to qualify as an improvement.
+                         (Default: 0)
+
+  --testing_model       Test the model performance after training.
+                         (Default: False)
+
+  --test_log_dir_location
+                        Location of results of the testing
+
+  --detailed_test_result
+                        Provides deatailed test results, including paths to image files, predicted label, target label, probabilities of classes
+                         (Default: False)
+
+  --testing_shuffle     Shuffle the testing set.
+                         (Default: False)
+
+  --test_chunks         Space separated number IDs specifying chunks to use for testing.
+                         (Default: [2])
+
 TODO: See JIRA tickets for updating docker_{train, evaluate}
 ```

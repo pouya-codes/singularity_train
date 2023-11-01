@@ -19,5 +19,5 @@ try_me:
       delta: 0
     test_model:
       testing_model: True
-      test_log_dir_location: /home/pouya/Develop/train_test/dataset/logs/test
+      test_log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/logs/test
       detailed_test_result: True

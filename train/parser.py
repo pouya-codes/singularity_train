@@ -145,35 +145,36 @@ def create_parser(parser):
 
         subparsers = parser.add_subparsers(dest="subparser", required=False)
 
-        parser_early_stopping = subparsers.add_parser("early_stopping")
+        subparser_parameters = subparsers.add_parser("early_stopping")
 
-        parser_early_stopping.add_argument("--use_early_stopping", type=bool, default=False, required=False,
+        subparser_parameters.add_argument("--use_early_stopping", type=bool, default=False, required=False,
                 help="Weather or not use EarlyStopping"
                 "Default uses False")
-        parser_early_stopping.add_argument("--patience", type=int, default=7, required=False,
+        subparser_parameters.add_argument("--patience", type=int, default=7, required=False,
                 help="How long to wait after last time validation loss improved."
                      "Default: 7")
-        parser_early_stopping.add_argument("--delta", type=float, default=0, required=False,
+        subparser_parameters.add_argument("--delta", type=float, default=0, required=False,
                 help="Minimum change in the monitored quantity to qualify as an improvement."
                 "Default: 0")
 
         subparsers.add_parser("test_model")
 
-        parser_early_stopping.add_argument("--testing_model", type=bool, default=True, required=True,
-                help="Weather or not test the model performance after training"
+        subparser_parameters.add_argument("--testing_model", type=bool, default=True, required=True,
+                help="Test the model performance after training"
                 "Default uses False")
 
-        parser_early_stopping.add_argument("--test_log_dir_location", type=str, required=True,
+        subparser_parameters.add_argument("--test_log_dir_location", type=str, required=True,
                 help="Location of results of the testing")
 
-        parser_early_stopping.add_argument("--detailed_test_result", type=bool, default=False, required=False,
-                help="Weather or not provides deatailed test results, including paths to image files, predicted label, target label, probabilities of classes"
+        subparser_parameters.add_argument("--detailed_test_result", type=bool, default=False, required=False,
+                help="Provides deatailed test results, including paths to image files, predicted label, target label, probabilities of classes"
                 "Default uses False")
 
-        parser_early_stopping.add_argument("--testing_shuffle", type=bool, default=False,
-                            help="Shuffle the testing set.")
+        subparser_parameters.add_argument("--testing_shuffle", type=bool, default=False,
+                            help="Shuffle the testing set."
+                                 "Default uses False")
 
-        parser_early_stopping.add_argument("--test_chunks", nargs="+", type=int,
+        subparser_parameters.add_argument("--test_chunks", nargs="+", type=int,
                 default=[2],
                 help="Space separated number IDs specifying chunks to use for testing.")
 

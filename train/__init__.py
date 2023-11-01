@@ -475,13 +475,12 @@ class ModelTrainer(PatchHanger):
         self.print_parameters()
         print(f'Instance name: {self.instance_name}')
         gpu_selector(self.gpu_id)
-        training_loader = self.create_data_loader(self.training_chunks, color_jitter=True, shuffle=self.training_shuffle)
+        training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle)
         validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
         model = self.build_model()
         self.train(model, training_loader, validation_loader)
         if (self.testing_model) :
             setup_log_file(self.test_log_dir_location, self.instance_name)
-            test_loader = self.create_data_loader(self.test_chunks,
-                                                  color_jitter=False, shuffle=self.testing_shuffle)
+            test_loader = self.create_data_loader(self.test_chunks, shuffle=self.testing_shuffle)
             model.model.load_state_dict(self.best_model_state_dict)
             overall_acc, overall_kappa, overall_f1, overall_auc = self.test(model, test_loader)
