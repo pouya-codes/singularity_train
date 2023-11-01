@@ -360,7 +360,7 @@ class ModelTrainer(PatchHanger):
         validation_loader : torch.DataLoader
             Loader for validation set.
         """
-        iter_idx = -1
+        iter_idx = 0
         max_val_acc = float('-inf')
         max_val_acc_idx = -1
         intv_loss = 0
@@ -371,6 +371,8 @@ class ModelTrainer(PatchHanger):
         if(self.early_stopping):
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
 
+        val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
+        print(f'Before training, validation accuracy is {val_acc}, validation loss is {val_loss}!')
         ###################
         # train the model #
         ###################
@@ -388,19 +390,22 @@ class ModelTrainer(PatchHanger):
                 pred_labels += torch.argmax(probs,
                         dim=1).cpu().numpy().tolist()
                 gt_labels += batch_labels.cpu().numpy().tolist()
-                if iter_idx % self.validation_interval == 0:
-
+                if iter_idx % self.validation_interval == self.validation_interval-1:
                     val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
+                    train_acc = accuracy_score(gt_labels, pred_labels)
                     self.writer.add_scalars(f"{self.instance_name}/loss",
                             {
                                 'validation': val_loss,
-                                'test': intv_loss / self.validation_interval
+                                'train': intv_loss / self.validation_interval
                             }, iter_idx)
                     self.writer.add_scalars(f"{self.instance_name}/accuracy",
                             {
                                 'validation': val_acc,
-                                'test': accuracy_score(gt_labels, pred_labels)
+                                'train': train_acc
                             }, iter_idx)
+                    print(f'\nEpoch: {epoch}, Iteration: {iter_idx}')
+                    print(f'Training: accuracy is {train_acc}, loss is {intv_loss / self.validation_interval}')
+                    print(f'Validation: accuracy is {val_acc}, loss is {val_loss}')
                     intv_loss = 0
                     pred_labels = []
                     gt_labels = []
@@ -419,14 +424,14 @@ class ModelTrainer(PatchHanger):
                         if early_stopping.early_stop:
                             print(f'\nEarly stopping at Epoch: {epoch}')
                             print(f'Peak accuracy: {max_val_acc}')
-                            print(f'Peach accuracy at iteration: {max_val_acc_idx}')
+                            print(f'Peak accuracy at iteration: {max_val_acc_idx}')
                             self.writer.close()
                             return
                 self.writer.flush()
 
             print(f'\nEpoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
-            print(f'Peach accuracy at iteration: {max_val_acc_idx}')
+            print(f'Peak accuracy at iteration: {max_val_acc_idx}')
             self.writer.close()
 
     def run(self):
