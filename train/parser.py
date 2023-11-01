@@ -31,19 +31,41 @@ description="""Trains a model for patch classification. This process does the tr
  (2) The flag --model_config_location specifies a path to a JSON file containing model hyperparameters. It is a residue of an old config format that didn't have a time to get refactored. For most of the experiments at AIM Lab, we currently use the below config JSON. The primary change is to set the num_subtypes
 
 {
-    "num_subtypes" : <number>,
-    "deep_model" : "vgg19_bn",
-    "use_weighted_loss" : false,
-    "continue_train" : false,
-        "normalize" : {
-        "normalize" : false,
-        "mean" : [ 0.485, 0.456, 0.406 ],
-        "std" : [ 0.229, 0.224, 0.225 ]
+    "model" :{
+        "num_subtypes" : 2,
+        "base_model" : "resnet18",
+        "pretrained" : false,
+        "last_layers": "short",
+        "concat_pool": true
     },
-    "augmentation" : true,
-    "parameters" : {
-        "pretrained" : true
+    "normalize" : {
+        "use_normalize" : false,
+        "mean" : [ 0.7371, 0.6904, 0.8211 ],
+        "std" : [ 0.0974, 0.0945, 0.0523 ]
     },
+    "augmentation" : {
+        "use_augmentation": false,
+        "flip": true,
+        "color_jitter": true,
+        "rotation": true,
+        "cut_out": {
+            "num_cut": 2,
+            "size_cut": 100,
+            "color_cut": "white"
+        }
+    },
+    "use_weighted_loss" : {
+        "use_weighted_loss" : false,
+        "weight": [2, 1]
+    },
+    "use_weighted_sampler" : false,
+    "use_balanced_sampler" : false,
+    "mix_up" : {
+        "use_mix_up" : false,
+        "alpha": 0.4
+    },
+    "freeze": -1,
+    "continue_train": false,
     "optimizer" : {
         "type" : "Adam",
         "parameters" : {
@@ -51,9 +73,19 @@ description="""Trains a model for patch classification. This process does the tr
             "amsgrad" : true,
             "weight_decay" : 0.0005
         }
+    },
+    "scheduler" : {
+        "type" : "OneCycleLR",
+        "parameters" : {
+            "max_lr" : 0.01,
+            "steps_per_epoch" : 1202,
+            "epochs" : 10,
+            "three_phase": true
+        }
     }
 }
 
+    (2.1) If you do not want to use scheduler, remove it from the JSON file.
 
  (3) For each epoch (specified by --epochs), we train the classifier using all patches in the training set, feeding the classifier a batch of patches (with size specified by --batch_size). At every batch interval (specififed by --validation_interval) we run validation loop and save (or overwrite) the model if it achieves the as of yet highest validation accuracy.
 """
@@ -68,7 +100,7 @@ def create_parser(parser):
                 help="Experiment name used to name log, model outputs.")
 
         parser.add_argument("--train_model", type=str2bool, nargs='?',
-                        const=True, default=True, required=False,
+                        const=True, default=True,
                 help="Train the model or just test the model"
                 "Default uses False")
 
@@ -89,10 +121,6 @@ def create_parser(parser):
         parser.add_argument("--validation_chunks", nargs="+", type=int,
                 default=[1],
                 help="Space separated number IDs specifying chunks to use for validation.")
-
-        parser.add_argument("--progressive_resizing", nargs="+", type=int,
-                default=[-1],
-                help="Space separated number of resizing.")
 
         parser.add_argument("--is_binary", action='store_true',
                 help="Whether we want to categorize patches by the Tumor/Normal category (true) "
@@ -136,16 +164,15 @@ def create_parser(parser):
                 help="Number of loader worker processes to multi-process data loading. "
                 "Default uses single-process data loading.")
 
-        parser.add_argument("--num_validation_batches", type=int, required=False,
+        parser.add_argument("--num_validation_batches", type=int,
                 help="Number of validation batches to use for model validation. "
                 "Default uses all validation batches for each validation loop.")
 
-        parser.add_argument("--gpu_id", type=int, required=False,
+        parser.add_argument("--gpu_id", type=int,
                 help="The ID of GPU to select. Default uses GPU with the most free memory.")
 
-        parser.add_argument("--number_of_gpus", type=int, required=False, default=1,
+        parser.add_argument("--number_of_gpus", type=int, default=1,
                 help="The number of GPUs to use. Default uses a GPU with the most free memory.")
-
 
         parser.add_argument("--seed", type=int,
                 default=DEAFULT_SEED,
@@ -157,98 +184,101 @@ def create_parser(parser):
         parser.add_argument("--validation_shuffle", action='store_true',
                 help="Shuffle the validation set.")
 
-        parser.add_argument("--writer_log_dir_location", type=dir_path, required=False,
+        parser.add_argument("--progressive_resizing", nargs="+", type=int,
+                default=[-1],
+                help="One of the techniques that enables the model to be trained on different input sizes. "
+                "The inputs are resized to the selected value and trained on them in order of the size. "
+                "For example, [32, 256, 512] means that the model will be trained first on 32, then 256, and at last on 512.")
+
+        parser.add_argument("--scheduler_step", type=str, required=False,
+                choices=['epoch', 'batch'],
+                help="If a scheduler is defined in the config file, it enables the step for that. "
+                "It should be 'epoch' or 'batch'. It depends on the scheduler, "
+                "for example OneCycleLR needs to be stepped in batch.")
+
+        parser.add_argument("--writer_log_dir_location", type=dir_path,
                 help="Directory in log_dir_location to put TensorBoard logs."
                 "Default uses log_dir_location/experiment_name.")
 
-        parser.add_argument("--scheduler_step", type=str, required=False,
-                help="When the step should be called either {batch or epochs}")
+        subparser = parser.add_subparsers(dest="subparser", required=True)
+        subparser_parameters = subparser.add_parser("freeze_training")
 
-        subparsers = parser.add_subparsers(dest="subparser", required=False)
+        freeze_train_parameters = subparser_parameters.add_argument_group('Freeze Training',
+                "Enable parameters for training with both freeze or unfreeze setup. "
+                "The models are divided into two parts of Feature Extraction and Classifier. "
+                "In freeze, batch normalization layers of Feature Extraction and all the layers of Classifier "
+                " are trained. In unfreeze, all layers are trained. "
+                "Freeze Training means that train the second part (classsifier) for some epochs, and then train the whole model toghether.")
 
-        subparser_parameters = subparsers.add_parser("freeze_training")
+        freeze_train_parameters.add_argument("--use_freeze_training", type=str2bool, nargs='?',
+                const=True, default=False,
+                help="Enable Freeze Training")
 
-        subparser_parameters.add_argument("--use_freeze_training", type=str2bool, nargs='?',
-                        const=True, default=False, required=False,
-                help="Uses EarlyStopping"
-                "Default uses False")
+        freeze_train_parameters.add_argument("--freeze_epochs", type=int, default=1,
+                help="Number of epochs model should be tranied in freeze mode.")
 
-        subparser_parameters.add_argument("--freeze_epochs", type=int, default=1, required=False,
-                help="How long to wait after last time validation loss improved."
-                     "Default: 7")
+        freeze_train_parameters.add_argument("--unfreeze_epochs", type=int, default=5,
+                help="Number of epochs model should be tranied in unfreeze mode.")
 
-        subparser_parameters.add_argument("--unfreeze_epochs", type=int, default=5, required=False,
-                help="How long to wait after last time validation loss improved."
-                     "Default: 7")
+        freeze_train_parameters.add_argument("--base_lr", type=float, default=2e-3,
+                help="Base learning rate. In freeze part, the classifier learning part will be base_lr, and the feature_extraction will be base_lr/10.")
 
-        subparser_parameters.add_argument("--base_lr", type=float, default=2e-3, required=False,
-                help="Minimum change in the monitored quantity to qualify as an improvement."
-                "Default: 0")
+        freeze_train_parameters.add_argument("--lr_mult", type=int, default=100,
+                help="In unfreeze part, the classifier learning part will be base_lr/2, and the feature_extraction will be base_lr/(2*lr_mult).")
 
-        subparser_parameters.add_argument("--lr_mult", type=int, default=100, required=False,
-                help="Minimum change in the monitored quantity to qualify as an improvement."
-                "Default: 0")
+        freeze_train_parameters.add_argument("--use_scheduler", action='store_true',
+                help="Using scheduler; If a scheduler is defined in the config file, it will use that. Otherwise, the model will use OneCycleLR.")
 
-        subparser_parameters.add_argument("--use_scheduler", action='store_true',
-                help="Shuffle the validation set.")
+        subparser.add_parser("early_stopping")
+        early_stop_parameters = subparser_parameters.add_argument_group('Early Stopping',
+                'Enable early stopping.')
+        early_stop_parameters.add_argument("--use_early_stopping", type=str2bool, nargs='?',
+                        const=True, default=False,
+                help="Enable Early Stopping")
 
-        subparser_parameters_ = subparsers.add_parser("early_stopping")
+        early_stop_parameters.add_argument("--patience", type=int, default=7,
+                help="How long to wait after last time validation loss improved.")
 
-        subparser_parameters_.add_argument("--use_early_stopping", type=str2bool, nargs='?',
-                        const=True, default=False, required=False,
-                help="Uses EarlyStopping"
-                "Default uses False")
-        subparser_parameters_.add_argument("--patience", type=int, default=7, required=False,
-                help="How long to wait after last time validation loss improved."
-                     "Default: 7")
-        subparser_parameters_.add_argument("--delta", type=float, default=0, required=False,
-                help="Minimum change in the monitored quantity to qualify as an improvement."
-                "Default: 0")
+        early_stop_parameters.add_argument("--delta", type=float, default=0,
+                help="Minimum change in the monitored quantity to qualify as an improvement.")
 
-        subparsers.add_parser("test_model")
+        subparser.add_parser("test_model")
+        test_parameters = subparser_parameters.add_argument_group('Testing',
+                'Enable parameters for testing.')
 
-        subparser_parameters.add_argument("--testing_model", type=str2bool, nargs='?',
-                        const=True, default=False, required=False,
-                help="Test the model performance after training"
-                "Default uses False")
+        test_parameters.add_argument("--testing_model", type=str2bool, nargs='?',
+                        const=True, default=False,
+                help="Test the model performance after training")
 
-        subparser_parameters.add_argument("--test_model_file_location", type=file_path, required=False,
+        test_parameters.add_argument("--test_model_file_location", type=file_path,
                 help="Path to saved model is used for testing (i.e. /path/to/model.pth)."
                  "Default uses the trained model during the training phase")
 
-        subparser_parameters.add_argument("--test_log_dir_location", type=dir_path, required=True,
+        test_parameters.add_argument("--test_log_dir_location", type=dir_path, required=True,
                 help="Location of results of the testing")
 
-        subparser_parameters.add_argument("--detailed_test_result", action='store_true',
+        test_parameters.add_argument("--detailed_test_result", action='store_true',
                 help="Provides deatailed test results, including paths to image files, predicted label, target label, probabilities of classes"
                 "Default uses False")
 
+        test_parameters.add_argument("--testing_shuffle", action='store_true',
+                help="Shuffle the testing set.")
 
-
-        subparser_parameters.add_argument("--testing_shuffle", action='store_true',
-                            help="Shuffle the testing set."
-                                 "Default uses False")
-
-        subparser_parameters.add_argument("--test_chunks", nargs="+", type=int,
+        test_parameters.add_argument("--test_chunks", nargs="+", type=int,
                 default=[2],
                 help="Space separated number IDs specifying chunks to use for testing.")
 
-        subparsers.add_parser("slide_level_accuracy")
+        test_parameters.add_argument("--calculate_slide_level_accuracy", type=str2bool, nargs='?',
+                const=True, default=False,
+                help="Wether calculate slide level accuracy")
 
-        subparser_parameters.add_argument("--calculate_slide_level_accuracy", type=str2bool, nargs='?',
-                        const=True, default=False, required=False,
-                help="Weather calculate slide level accuracy"
-                "Default uses False")
-
-        subparser_parameters.add_argument("--slide_level_accuracy_threshold", type=float, default=0, required=False,
+        test_parameters.add_argument("--slide_level_accuracy_threshold", type=float, default=0,
                 help="Minimum threshold that the patch labels probabilities should pass to be considered in the slide level voting."
-                "Default: 1/number_of_classes")
+                " Default: 1/number_of_classes")
 
-        subparser_parameters.add_argument("--slide_level_accuracy_verbose", type=str2bool, nargs='?',
-                        const=True, default=False, required=False,
-                help="Verbose the detail for slide level accuracy"
-                "Default uses False")
-
+        test_parameters.add_argument("--slide_level_accuracy_verbose", type=str2bool, nargs='?',
+                const=True, default=False,
+                help="Verbose the detail for slide level accuracy")
 
 
 def get_args():
