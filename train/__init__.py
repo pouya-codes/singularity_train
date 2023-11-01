@@ -409,7 +409,7 @@ class ModelTrainer(PatchHanger):
         if best_val_acc is None:
             val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
             max_val_acc = val_acc
-            print(f'Before training, validation accuracy is {val_acc}, validation loss is {val_loss}!')
+            print(f'\nBefore training, validation accuracy is {val_acc}, validation loss is {val_loss}!')
         ###################
         # train the model #
         ###################
@@ -522,6 +522,7 @@ class ModelTrainer(PatchHanger):
                                          use_scheduler=self.use_scheduler, epoch=self.epochs,
                                          batch_per_epoch=len(training_loader))
         self.train(model, training_loader, validation_loader, best_val_acc=best_val_acc)
+        self.base_lr *= 2
 
     def run(self):
         if self.train_model:
