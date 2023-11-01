@@ -304,7 +304,7 @@ def create_parser(parser):
         test_parameters.add_argument("--heatmaps_dir_location", type=dir_path, required=False,
                 help="Location of generated heatmaps files")
 
-        test_parameters.add_argument("--gradcam", action='store_true',
+        test_parameters.add_argument("--gradcam", action='store_true', default= False,
                 help="Generate the grad cam image files")
 
         test_parameters.add_argument("--gradcam_dir_location", type=dir_path, required=False,
@@ -313,7 +313,7 @@ def create_parser(parser):
         test_parameters.add_argument("--slides_location", type=dir_path, required=False,
                 help="Path to the slides used to extract and generate data splits")
 
-        test_parameters.add_argument("--gradcam_h5", action='store_true',
+        test_parameters.add_argument("--gradcam_h5", action='store_true', default= False,
                 help="Generate the overlay grad cam h5 files that can be used to visualize the results on cPathPortal")
 
 def get_args():

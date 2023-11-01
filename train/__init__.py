@@ -160,10 +160,11 @@ class ModelTrainer(PatchHanger):
                         self.heatmaps_dir_location = config.heatmaps_dir_location
                         self.slides_location = config.slides_location
                 self.gradcam = config.gradcam
+                self.gradcam_h5 = config.gradcam_h5
                 if self.gradcam:
                         self.gradcam_dir_location = config.gradcam_dir_location
                         self.slides_location = config.slides_location
-                        self.gradcam_h5 = config.gradcam_h5
+                        
                         
 
                 self.best_model_state_dict = None
