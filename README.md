@@ -16,7 +16,7 @@ Follow steps in this [link](https://www.bcgsc.ca/wiki/display/OVCARE/Singularity
 To build singularity image
 
 ```
-$singularity build --fakeroot singularity_train.sif Singularityfile.def
+$singularity build --remote singularity_train.sif Singularityfile.def
 ```
 
 To run the container afterwards

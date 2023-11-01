@@ -1,8 +1,5 @@
 Bootstrap: library
 From: debian:9
-%files
-    submodules/submodule_cv-0.0.1-py3-none-any.whl /opt
-    submodules/submodule_utils-0.0.1-py3-none-any.whl /opt
 %post
     apt-get update && apt-get -y upgrade
     apt-get -y install \
@@ -31,10 +28,11 @@ From: debian:9
     conda install -c conda-forge protobuf
     
     #Install submodules
-    pip install /opt/submodule_cv-0.0.1-py3-none-any.whl
-    pip install /opt/submodule_utils-0.0.1-py3-none-any.whl
-    rm /opt/submodule_cv-0.0.1-py3-none-any.whl
-    rm /opt/submodule_utils-0.0.1-py3-none-any.whl
+    git clone https://github.com/pouya1991/AIMLab
+    pip install AIMLab/submodule_cv-0.0.1-py3-none-any.whl
+    pip install AIMLab/submodule_utils-0.0.1-py3-none-any.whl
+    rm -rf AIMLab
+
 
 %runscript
     python app.py $*
