@@ -1,9 +1,9 @@
 # Singularity Train
 Singularity Train is a Python module designed for training deep learning models on histopathology data. It takes in a JSON file of one or more chunks (split JSON file or group JSON file) that contain the patch paths to feed into the classifier. The module allows for extensive model configuration and tuning using hyperparameters specified in a separate JSON file. It also supports progressive resizing, a technique that enables the model to be trained on different input sizes.
 ### Usage ###
-
+```
 usage: app.py [-h] {from-experiment-manifest,from-arguments} ...
-
+```
 Trains a model for patch classification. This process does the training in the following manner:
 
  (1) Takes in a JSON file (aka. file of one or more chunks) that is either a split JSON file created by `singularity_create_cross_validation_groups`, or a group JSON file created by `singularity_create_groups` specified by --chunk_file_location. Each chunk contains patch paths to feed into the classifier. Use --training_chunks to select the chunks to include in your training set, etc. JSON files use Mitch's format for groups i.e. it is a json file with the format
