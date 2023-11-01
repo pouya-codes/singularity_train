@@ -89,10 +89,10 @@ class ModelTrainer(object):
             subtypes,
             patch_pattern,
             chunk_file_location,
-            patch_location,
             log_dir_location,
             model_dir_location,
             model_config_location,
+            patch_location=None,
             num_patch_workers=0,
             num_validation_batches=None,
             gpu_id=None,
@@ -123,11 +123,12 @@ class ModelTrainer(object):
         self.subtypes = self.create_category_enum(self.is_binary, subtypes)
         self.patch_pattern = self.create_patch_pattern(patch_pattern)
         self.chunk_file_location = chunk_file_location
-        self.patch_location = patch_location
         self.log_dir_location = log_dir_location
         self.model_dir_location = model_dir_location
         self.model_config_location = model_config_location
+        self.model_config = self.load_model_config()
         # optional
+        self.patch_location = patch_location # unused
         self.num_patch_workers = num_patch_workers
         self.num_validation_batches = num_validation_batches
         self.gpu_id = gpu_id
@@ -142,6 +143,10 @@ class ModelTrainer(object):
     @classmethod
     def from_arguments(cls, config_file_location):
         pass
+
+    def load_model_config(self):
+        with open(self.model_config_location) as f:
+            return json.load(f)
 
     def load_chunks(self, chunk_ids):
         """Load patch paths from specified chunks in chunk file
@@ -198,35 +203,27 @@ class ModelTrainer(object):
         return DataLoader(patch_dataset, batch_size=self.batch_size, 
                 shuffle=shuffle, num_workers=self.num_patch_workers)
 
-
-    def generate_data_loader(chunk_file_path, chunks_to_use, path_arg_to_index_dict, batch_size, shuffle, num_workers, enable_color_jitter=False):
-
-    img_paths = load_chunk_file(chunk_file_path, chunks_to_use)
-    x_set, y_set = generate_x_y_sets(img_paths, path_arg_to_index_dict)
-
-    patch_dataset = PatchDataset(x_set, y_set, enable_color_jitter=enable_color_jitter)
-    dataloader = DataLoader(patch_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-
-    return dataloader
-
     def validate(self, model, validation_loader):
         pred_labels = []
         gt_labels = []
         model.model.eval()
         with torch.no_grad():
             val_idx, data in enumerate(validation_loader):
-                if val idx > self.validation_batch_size:
-                    cur_data, cur_label = data
-                    cur_data = cur_data.cuda()
-                    cur_label = cur_label.cuda()
-                    _, pred_prob, _ = model.forward(batch_data)
-                    if self.is_binary:
-                        pred_labels += (pred_prob >=
-                                0.5).type(torch.int).cpu().numpy().tolist()
-                    else:
-                        pred_labels += torch.argmax(pred_prob,
-                                dim=1).cpu().numpy().tolist()
-                    gt_labels += cur_label.cpu().numpy().tolist()
+                if self.num_validation_batches is not None \
+                        and val_idx >= self.num_validation_batches:
+                    break
+                cur_data, cur_label = data
+                cur_data = cur_data.cuda()
+                cur_label = cur_label.cuda()
+                _, pred_prob, _ = model.forward(batch_data)
+                if self.is_binary:
+                    pred_labels += (pred_prob >=
+                            0.5).type(torch.int).cpu().numpy().tolist()
+                else:
+                    pred_labels += torch.argmax(pred_prob,
+                            dim=1).cpu().numpy().tolist()
+                gt_labels += cur_label.cpu().numpy().tolist()
+                
         model.model.train()
         return accuracy_score(gt_labels, pred_labels)
 
@@ -242,20 +239,21 @@ class ModelTrainer(object):
                 batch_data, batch_labels = data
                 logits, probs, output = model.forward(train_data)
                 model.optimize_parameters(logits, train_labels, output)
-                if iter_idx % self.rep_intv == 0:
+                if iter_idx % self.validation_interval == 0:
                     val_acc = self.validate(model, validation_loader)
                     if max_val_acc =< val_acc:
                         max_val_acc = val_acc
                         max_val_acc_idx = iter_idx
-                        model.save_state(self.model_save_location, self.train_instance_name,
+                        model.save_state(self.model_dir_location,
+                                self.train_instance_name,
                                 iter_idx, epoch)
             print(f'Epoch: {epoch}')
             print(f'Peak accuracy: {max_val_acc}')
             print(f'Peach accuracy at iteration: {max_val_acc_idx}')
 
     def run(self):
-        if self.log_folder_location:
-            setup_log_file(self.log_folder_location, self.train_instance_name)
+        if self.log_dir_location:
+            setup_log_file(self.log_dir_location, self.train_instance_name)
         print(f'Instance name: {self.train_instance_name}')
         gpu_selector(self.gpu_id)
         training_loader = create_data_loader(self.training_chunks,

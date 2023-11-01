@@ -91,11 +91,6 @@ if __name__ == "__main__":
             help="File path of group or split file (aka. chunks) to use "
             "(i.e. /path/to/patient_3_groups.json)")
     
-    parser.add_argument("--patch_location", type=dir_path, required=True,
-            help="Path to root directory containing dataset patches specified in "
-            "group or split file (i.e. /path/to/patch/rootdir/). Used by Docker "
-            "to link the directory.")
-
     parser.add_argument("--log_dir_location", type=dir_path, required=True,
             help="Path to log directory to save training logs (i.e. "
             "/path/to/logs/training/).")
@@ -105,6 +100,11 @@ if __name__ == "__main__":
 
     parser.add_argument("--model_config_location", type=str, required=True,
             help="Path to model config JSON (i.e. /path/to/model_config.json).")
+
+    parser.add_argument("--patch_location", type=dir_path, required=False,
+            help="Path to root directory containing dataset patches specified in "
+            "group or split file (i.e. /path/to/patch/rootdir/). Used by Docker "
+            "to link the directory.")
 
     parser.add_argument("--num_patch_workers", type=int, default=0,
             help="Number of loader worker processes to multi-process data loading. "
