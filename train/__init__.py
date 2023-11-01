@@ -135,8 +135,11 @@ class ModelTrainer(PatchHanger):
         self.training_shuffle = config.training_shuffle
         self.validation_shuffle = config.validation_shuffle
 
-        self.writer_log_dir_location = os.path.join(
-                self.log_dir_location, self.train_instance_name)
+        if config.writer_log_dir_location:
+            self.writer_log_dir_location = config.writer_log_dir_location
+        else:
+            self.writer_log_dir_location = os.path.join(
+                    self.log_dir_location, self.experiment_name)
         if not os.path.exists(self.writer_log_dir_location):
             os.makedirs(self.writer_log_dir_location)
         self.writer = SummaryWriter(log_dir=self.writer_log_dir_location)
@@ -225,9 +228,7 @@ class ModelTrainer(PatchHanger):
                 gt_labels += cur_label.cpu().numpy().tolist()
                 val_idx += 1
         model.model.train()
-        self.writer.add_scalar('Validation Loss',
-                val_loss / val_idx, global_step=iter_idx)
-        return accuracy_score(gt_labels, pred_labels)
+        return accuracy_score(gt_labels, pred_labels), (val_loss / val_idx)
 
     def train(self, model, training_loader, validation_loader):
         """Runs the training loop
@@ -264,16 +265,21 @@ class ModelTrainer(PatchHanger):
                         dim=1).cpu().numpy().tolist()
                 gt_labels += batch_labels.cpu().numpy().tolist()
                 if iter_idx % self.validation_interval == 0:
-                    self.writer.add_scalar('Training Loss',
-                            intv_loss / self.validation_interval, global_step=iter_idx)
-                    self.writer.add_scalar('Training Accuracy',
-                            accuracy_score(gt_labels, pred_labels), global_step=iter_idx)
+
+                    val_acc, val_loss = self.validate(model, validation_loader, iter_idx)
+                    self.writer.add_scalars(f"{self.train_instance_name}/loss",
+                            {
+                                'validation': val_loss,
+                                'test': intv_loss / self.validation_interval
+                            }, iter_idx)
+                    self.writer.add_scalars(f"{self.train_instance_name}/accuracy",
+                            {
+                                'validation': val_acc,
+                                'test': accuracy_score(gt_labels, pred_labels)
+                            }, iter_idx)
                     intv_loss = 0
                     pred_labels = []
                     gt_labels = []
-                    val_acc = self.validate(model, validation_loader, iter_idx)
-                    self.writer.add_scalar('Validation Accuracy', val_acc,
-                            global_step=iter_idx)
                     if max_val_acc <= val_acc:
                         max_val_acc = val_acc
                         max_val_acc_idx = iter_idx

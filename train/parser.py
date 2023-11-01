@@ -136,6 +136,10 @@ parser.add_argument("--training_shuffle", action='store_true',
 parser.add_argument("--validation_shuffle", action='store_true',
         help="Shuffle the validation set.")
 
+parser.add_argument("--writer_log_dir_location", type=str, required=False,
+        help="Directory in log_dir_location to put TensorBoard logs."
+        "Default uses log_dir_location/experiment_name.")
+
 def get_args():
     args, unparsed = parser.parse_known_args()
     return args
