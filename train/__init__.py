@@ -25,16 +25,6 @@ import submodule_utils as utils
 from submodule_cv import (ChunkLookupException, setup_log_file,
     gpu_selector, PatchHanger, EarlyStopping)
 
-# Folder permission mode
-p_mode = 0o777
-oldmask = os.umask(000)
-nvmlInit()
-
-default_seed = 256
-default_num_patch_workers = 0
-default_subtypes = {'MMRD':0, 'P53ABN': 1, 'P53WT': 2, 'POLE': 3}
-default_patch_pattern = 'annotation/subtype/slide'
-
 class ModelTrainer(PatchHanger):
     """Trains a model
     
@@ -112,8 +102,6 @@ class ModelTrainer(PatchHanger):
         config : argparse.Namespace
             The args passed by user
         """
-        self.seed = config.seed
-        self.set_random_seed()
         self.experiment_name = config.experiment_name
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         self.instance_name = f'{self.experiment_name}_{timestamp}'
@@ -152,7 +140,7 @@ class ModelTrainer(PatchHanger):
         self.detailed_test_result = config.detailed_test_result
         self.testing_shuffle = config.testing_shuffle
         self.test_chunks = config.test_chunks
-
+        self.seed = config.seed
         self.best_model_state_dict = None
 
 
@@ -178,17 +166,6 @@ class ModelTrainer(PatchHanger):
     @classmethod
     def from_arguments(cls, config_file_location):
         pass
-
-
-    def set_random_seed(self):
-        # 1. Set `PYTHONHASHSEED` environment variable at a fixed value
-        os.environ['PYTHONHASHSEED'] = str(self.seed)
-        # 2. Set `python` built-in pseudo-random generator at a fixed value
-        random.seed(self.seed)
-        # 3. Set `numpy` pseudo-random generator at a fixed value
-        np.random.seed(self.seed)
-        # 4. Set `pytorch` pseudo-random generator at a fixed value
-        torch.manual_seed(self.seed)
 
     def print_parameters(self):
         """Print argument parameters as YAML data to log file.

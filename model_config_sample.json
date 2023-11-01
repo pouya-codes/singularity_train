@@ -1,8 +1,13 @@
 {
     "num_subtypes" : 10,
-    "deep_model" : "mobilenet_v2",
+    "deep_model" : "resnet34",
     "use_weighted_loss" : false,
     "continue_train" : false,
+        "normalize" : {
+        "normalize" : false,
+        "mean" : [ 0.485, 0.456, 0.406 ],
+        "std" : [ 0.229, 0.224, 0.225 ]
+    },
     "parameters" : {
         "pretrained" : true
     },

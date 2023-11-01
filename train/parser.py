@@ -2,13 +2,17 @@ import argparse
 from submodule_utils.manifest.arguments import manifest_arguments
 
 from submodule_utils import (BALANCE_PATCHES_OPTIONS, DATASET_ORIGINS,
-        PATCH_PATTERN_WORDS)
+        PATCH_PATTERN_WORDS, set_random_seed, DEAFULT_SEED)
 from submodule_utils.arguments import (
         dir_path, str2bool, file_path, dataset_origin, balance_patches_options,
         str_kv, int_kv, subtype_kv, make_dict,
         ParseKVToDictAction, CustomHelpFormatter)
 
 from train import *
+
+default_num_patch_workers = 0
+default_subtypes = {'MMRD':0, 'P53ABN': 1, 'P53WT': 2, 'POLE': 3}
+default_patch_pattern = 'annotation/subtype/slide'
 
 description="""Trains a model for patch classification. This process does the training in the following manner:
 
@@ -123,7 +127,7 @@ def create_parser(parser):
                 help="The ID of GPU to select. Default uses GPU with the most free memory.")
 
         parser.add_argument("--seed", type=int,
-                default=default_seed,
+                default=DEAFULT_SEED,
                 help="Seed for random shuffle.")
 
         parser.add_argument("--training_shuffle", action='store_true',
@@ -179,5 +183,6 @@ def create_parser(parser):
 def get_args():
         parser = create_parser()
         args = parser.get_args()
+        set_random_seed(args.seed)
         return args
 
