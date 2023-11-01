@@ -22,8 +22,13 @@ p_mode = 0o777
 oldmask = os.umask(000)
 nvmlInit()
 
+default_seed = 256
+default_num_patch_workers = 0
+default_subtypes = {'MMRD':0, 'P53ABN': 1, 'P53WT': 2, 'POLE': 3}
+default_patch_pattern = 'annotation/subtype/slide'
+
 class ModelTrainer(PatchHanger):
-    '''Trains a model
+    """Trains a model
     
     Attributes
     ----------
@@ -42,96 +47,95 @@ class ModelTrainer(PatchHanger):
     epochs : int
         The number of epochs to run model training on training dataset
     
-    TODO: finish attributes
-    training_chunks
-    self.validation_chunks = validation_chunks
-    self.is_binary = is_binary
-    self.CategoryEnum = utils.create_category_enum(
-            self.is_binary, subtypes)
-    self.patch_pattern = utils.create_patch_pattern(patch_pattern)
-    self.chunk_file_location = chunk_file_location
-    self.log_dir_location = log_dir_location
-    self.model_dir_location = model_dir_location
-    self.model_config_location = model_config_location
-    self.model_config = self.load_model_config()
-    # optional
-    self.patch_location = patch_location # unused
-    self.num_patch_workers = num_patch_workers
-    self.num_validation_batches = num_validation_batches
-    self.gpu_id = gpu_id
-    self.seed = seed
-    self.training_shuffle = training_shuffle
-    self.validation_shuffle = validation_shuffle
-    # raw
-    self.raw_subtypes = subtypes
-    self.raw_patch_pattern = patch_pattern
-    # model_file_location
-    self.model_file_location = os.path.join(self.model_dir_location,
-            f'{self.train_instance_name}.pth')
-    '''
+    training_chunks : list of int
+        Space separated number IDs specifying chunks to use for training.
 
-    def __init__(self,
-            experiment_name,
-            batch_size,
-            validation_interval,
-            epochs,
-            training_chunks,
-            validation_chunks,
-            is_binary,
-            subtypes,
-            patch_pattern,
-            chunk_file_location,
-            log_dir_location,
-            model_dir_location,
-            model_config_location,
-            patch_location=None,
-            num_patch_workers=0,
-            num_validation_batches=None,
-            gpu_id=None,
-            seed=256,
-            training_shuffle=False,
-            validation_shuffle=False):
-        '''
-        Changes:
-        test_name => experiment_name
-        validation_frequency => validation_interval
-        epochs
-        log_folder_location => log_dir_location
-        model_save_location => model_dir_location
-        patch_workers => num_patch_workers
-        path_value_to_index => subtypes
-        model_config => model_config_location
-        '''
-        self.experiment_name = experiment_name
+    validation_chunks : list of int
+        Space separated number IDs specifying chunks to use for validation.
+
+    is_binary : boolean
+        Whether we want to categorize patches by the Tumor/Normal category (true) or by the subtype category (false).
+
+    CategoryEnum : enum.Enum
+        The enum representing the categories and is one of (SubtypeEnum, BinaryEnum).
+
+    patch_pattern : dict
+        Dictionary describing the directory structure of the patch paths.
+        A non-multiscale patch can be contained in a directory /path/to/patch/rootdir/Tumor/MMRD/VOA-1234/1_2.png so its patch_pattern is annotation/subtype/slide.
+        A multiscale patch can be contained in a directory /path/to/patch/rootdir/Stroma/P53ABN/VOA-1234/10/3_400.png so its patch pattern is annotation/subtype/slide/magnification
+
+    chunk_file_location : str
+        File path of group or split file (aka. chunks) to use (i.e. /path/to/patient_3_groups.json)
+
+    log_dir_location : str
+        Path to log directory to save training logs (i.e. /path/to/logs/training/).
+
+    model_dir_location
+
+    model_config_location
+    
+    model_config : dict
+    
+    patch_location
+    
+    num_patch_workers
+    
+    num_validation_batches
+
+    gpu_id : int
+    
+    seed : int
+    
+    training_shuffle : bool
+    
+    validation_shuffle : bool
+
+    raw_subtypes : dict
+    
+    raw_patch_pattern : str
+
+    model_file_location : str
+        Path to persisted model.
+    """
+
+    def __init__(self, config):
+        """Initialize training component.
+
+        Arguments
+        ---------
+        config : argparse.Namespace
+            The args passed by user
+        """
+        self.experiment_name = config.experiment_name
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         self.train_instance_name = f'{self.experiment_name}_{timestamp}'
         # hyperparameters
-        self.batch_size = batch_size
-        self.validation_interval = validation_interval
-        self.epochs = epochs
+        self.batch_size = config.batch_size
+        self.validation_interval = config.validation_interval
+        self.epochs = config.epochs
         # app administration
-        self.training_chunks = training_chunks
-        self.validation_chunks = validation_chunks
-        self.is_binary = is_binary
+        self.training_chunks = config.training_chunks
+        self.validation_chunks = config.validation_chunks
+        self.is_binary = config.is_binary
         self.CategoryEnum = utils.create_category_enum(
-                self.is_binary, subtypes)
-        self.patch_pattern = utils.create_patch_pattern(patch_pattern)
-        self.chunk_file_location = chunk_file_location
-        self.log_dir_location = log_dir_location
-        self.model_dir_location = model_dir_location
-        self.model_config_location = model_config_location
+                self.is_binary, config.subtypes)
+        self.patch_pattern = utils.create_patch_pattern(config.patch_pattern)
+        self.chunk_file_location = config.chunk_file_location
+        self.log_dir_location = config.log_dir_location
+        self.model_dir_location = config.model_dir_location
+        self.model_config_location = config.model_config_location
         self.model_config = self.load_model_config()
         # optional
-        self.patch_location = patch_location # unused
-        self.num_patch_workers = num_patch_workers
-        self.num_validation_batches = num_validation_batches
-        self.gpu_id = gpu_id
-        self.seed = seed
-        self.training_shuffle = training_shuffle
-        self.validation_shuffle = validation_shuffle
+        self.patch_location = config.patch_location # unused
+        self.num_patch_workers = config.num_patch_workers
+        self.num_validation_batches = config.num_validation_batches
+        self.gpu_id = config.gpu_id
+        self.seed = config.seed
+        self.training_shuffle = config.training_shuffle
+        self.validation_shuffle = config.validation_shuffle
         # raw
-        self.raw_subtypes = subtypes
-        self.raw_patch_pattern = patch_pattern
+        self.raw_subtypes = config.subtypes
+        self.raw_patch_pattern = config.patch_pattern
         # model_file_location
         self.model_file_location = os.path.join(self.model_dir_location,
                 f'{self.train_instance_name}.pth')
@@ -145,8 +149,9 @@ class ModelTrainer(PatchHanger):
         pass
 
     def print_parameters(self):
-        '''Print argument parameters
-        '''
+        """Print argument parameters as YAML data to log file.
+        The YAML data can be read from the log file by subsequent components.
+        """
         payload = yaml.dump({
             ## Arguments
             'experiment_name':     self.experiment_name,
@@ -178,6 +183,16 @@ class ModelTrainer(PatchHanger):
         print('...') # end YAML
 
     def validate(self, model, validation_loader):
+        """Runs the validation loop
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            Model to train
+
+        validation_loader : torch.DataLoader
+            Loader for validation set.
+        """
         pred_labels = []
         gt_labels = []
         model.model.eval()
@@ -201,6 +216,19 @@ class ModelTrainer(PatchHanger):
         return accuracy_score(gt_labels, pred_labels)
 
     def train(self, model, training_loader, validation_loader):
+        """Runs the training loop
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            Model to train
+        
+        training_loader : torch.DataLoader
+            Loader for training set.
+
+        validation_loader : torch.DataLoader
+            Loader for validation set.
+        """
         iter_idx = -1
         max_val_acc = float('-inf')
         max_val_acc_idx = -1
