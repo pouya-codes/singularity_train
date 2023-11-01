@@ -487,5 +487,6 @@ class ModelTrainer(PatchHanger):
         if (self.testing_model) :
             setup_log_file(self.test_log_dir_location, self.instance_name)
             test_loader = self.create_data_loader(self.test_chunks, shuffle=self.testing_shuffle)
-            model.model.load_state_dict(self.best_model_state_dict)
+            # model.model.load_state_dict(self.best_model_state_dict)
+            model.load_state(self.model_file_location)
             self.test(model, test_loader, 'Test')
