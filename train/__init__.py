@@ -2,6 +2,7 @@ import os
 import json
 import time
 import sys
+import enum
 
 from pynvml import *
 import numpy as np
@@ -11,6 +12,7 @@ from sklearn.metrics import accuracy_score
 from torch.utils.data import Dataset, DataLoader
 
 import train.utils as utils
+from train.utils.subtype_enum import BinaryEnum
 from train.patch_dataset import PatchDataset
 import train.aim_logger as aim_logger
 import train.aim_models as aim_models
