@@ -5,7 +5,7 @@ import sys
 import enum
 import csv
 
-import yaml
+import yaml, random
 from tqdm import tqdm
 from pynvml import *
 import numpy as np
@@ -112,6 +112,8 @@ class ModelTrainer(PatchHanger):
         config : argparse.Namespace
             The args passed by user
         """
+        self.seed = config.seed
+        self.set_random_seed()
         self.experiment_name = config.experiment_name
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         self.instance_name = f'{self.experiment_name}_{timestamp}'
@@ -135,7 +137,6 @@ class ModelTrainer(PatchHanger):
         self.num_patch_workers = config.num_patch_workers
         self.num_validation_batches = config.num_validation_batches
         self.gpu_id = config.gpu_id
-        self.seed = config.seed
         self.training_shuffle = config.training_shuffle
         self.validation_shuffle = config.validation_shuffle
 
@@ -178,6 +179,17 @@ class ModelTrainer(PatchHanger):
     def from_arguments(cls, config_file_location):
         pass
 
+
+    def set_random_seed(self):
+        # 1. Set `PYTHONHASHSEED` environment variable at a fixed value
+        os.environ['PYTHONHASHSEED'] = str(self.seed)
+        # 2. Set `python` built-in pseudo-random generator at a fixed value
+        random.seed(self.seed)
+        # 3. Set `numpy` pseudo-random generator at a fixed value
+        np.random.seed(self.seed)
+        # 4. Set `pytorch` pseudo-random generator at a fixed value
+        torch.manual_seed(self.seed)
+
     def print_parameters(self):
         """Print argument parameters as YAML data to log file.
         The YAML data can be read from the log file by subsequent components.
@@ -211,6 +223,7 @@ class ModelTrainer(PatchHanger):
         print('---') # begin YAML
         print(payload)
         print('...') # end YAML
+        print(f'Instance name: {self.instance_name}')
 
     def validate(self, model, validation_loader, iter_idx):
         """Runs the validation loop
@@ -478,7 +491,6 @@ class ModelTrainer(PatchHanger):
     def run(self):
         setup_log_file(self.log_dir_location, self.instance_name)
         self.print_parameters()
-        print(f'Instance name: {self.instance_name}')
         gpu_selector(self.gpu_id)
         training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle)
         validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
