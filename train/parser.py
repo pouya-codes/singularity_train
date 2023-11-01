@@ -62,6 +62,11 @@ def create_parser(parser):
         parser.add_argument("--experiment_name", type=str, required=True,
                 help="Experiment name used to name log, model outputs.")
 
+        parser.add_argument("--train_model", type=str2bool, nargs='?',
+                        const=True, default=True, required=False,
+                help="Train the model or just test the model"
+                "Default uses False")
+
         parser.add_argument("--batch_size", type=int, required=True,
                 help="Batch size is the number of patches to put in a batch. "
                 "This flag sets the batch size to use on training, validation and test datasets.")
@@ -167,6 +172,10 @@ def create_parser(parser):
                         const=True, default=False, required=False,
                 help="Test the model performance after training"
                 "Default uses False")
+
+        subparser_parameters.add_argument("--test_model_file_location", type=file_path, required=False,
+                help="Path to saved model is used for testing (i.e. /path/to/model.pth)."
+                 "Default uses the trained model during the training phase")
 
         subparser_parameters.add_argument("--test_log_dir_location", type=dir_path, required=True,
                 help="Location of results of the testing")

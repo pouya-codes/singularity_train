@@ -105,7 +105,9 @@ class ModelTrainer(PatchHanger):
         self.experiment_name = config.experiment_name
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         self.instance_name = f'{self.experiment_name}_{timestamp}'
+
         # hyperparameters
+        self.train_model = config.train_model
         self.batch_size = config.batch_size
         self.validation_interval = config.validation_interval
         self.epochs = config.epochs
@@ -137,6 +139,7 @@ class ModelTrainer(PatchHanger):
 
         # testing model parameters
         self.testing_model = config.testing_model
+        self.test_model_file_location = config.test_model_file_location
         self.test_log_dir_location = config.test_log_dir_location
         self.detailed_test_result = config.detailed_test_result
         self.testing_shuffle = config.testing_shuffle
@@ -427,13 +430,17 @@ class ModelTrainer(PatchHanger):
     def run(self):
         setup_log_file(self.log_dir_location, self.instance_name)
         gpu_devices = gpu_selector(self.gpu_id, self.number_of_gpus)
-        training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle)
-        validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
         model = self.build_model(gpu_devices)
-        self.train(model, training_loader, validation_loader)
-        self.test(model, validation_loader,'Validation')
+        if (self.train_model) :
+            training_loader = self.create_data_loader(self.training_chunks, shuffle=self.training_shuffle)
+            validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
+            self.train(model, training_loader, validation_loader)
+            self.test(model, validation_loader,'Validation')
         if (self.testing_model) :
             setup_log_file(self.test_log_dir_location, self.instance_name)
             test_loader = self.create_data_loader(self.test_chunks, shuffle=self.testing_shuffle)
-            model.model.load_state_dict(self.best_model_state_dict)
+            if (self.best_model_state_dict and not self.test_model_file_location):
+                model.model.load_state_dict(self.best_model_state_dict)
+            else:
+                model.load_state(self.test_model_file_location)
             self.test(model, test_loader, 'Test')

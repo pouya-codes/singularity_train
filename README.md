@@ -165,6 +165,10 @@ optional arguments:
   --testing_model       Test the model performance after training.
                          (Default: False)
 
+  --test_model_file_location TEST_MODEL_FILE_LOCATION
+                        Path to saved model is used for testing (i.e. /path/to/model.pth). Default uses the trained model during the training phase
+                         (default: None)
+
   --test_log_dir_location
                         Location of results of the testing
 

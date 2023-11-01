@@ -1,5 +1,6 @@
 try_me:
     experiment_name: tumor_grade_x5_256_vgg19_without_normalization_1
+    train_model: true
     batch_size: 32
     validation_interval: 50
     epochs: 10
@@ -21,5 +22,6 @@ try_me:
       delta: 0
     test_model:
       testing_model: True
+      test_model_file_location: /path/to/model.pth
       test_log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/logs/test
       detailed_test_result:
