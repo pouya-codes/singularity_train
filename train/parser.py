@@ -157,7 +157,7 @@ def create_parser(parser):
                 help="Minimum change in the monitored quantity to qualify as an improvement."
                 "Default: 0")
 
-        # parser_test_model = subparsers.add_parser("test_model")
+        subparsers.add_parser("test_model")
 
         parser_early_stopping.add_argument("--testing_model", type=bool, default=True, required=True,
                 help="Weather or not test the model performance after training"

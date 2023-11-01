@@ -28,12 +28,11 @@ From: debian:9
     conda install -c conda-forge protobuf
     
     #Install submodules
+    pip install efficientnet-pytorch
     git clone https://github.com/pouya1991/AIMLab_submodule_utils.git
     pip install -e ./AIMLab_submodule_utils
     git clone https://github.com/pouya1991/AIMLab_submodule_cv.git
     pip install -e ./AIMLab_submodule_cv
-    rm -rf AIMLab_submodule_utils
-    rm -rf AIMLab_submodule_cv
 
 
 %runscript

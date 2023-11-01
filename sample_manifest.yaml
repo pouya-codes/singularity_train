@@ -17,6 +17,7 @@ try_me:
       use_early_stopping: True
       patience: 7
       delta: 0
+    test_model:
       testing_model: True
       test_log_dir_location: /home/pouya/Develop/train_test/dataset/logs/test
       detailed_test_result: True
