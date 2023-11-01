@@ -1,6 +1,32 @@
-# Docker Train
+# Singularity Train
+```
+Development information
 
-## Usage
+Date Created: 22 July 2020
+Last Update: 23 July 2020 by Pouya Ahmadvand
+Developer: Colin Chen
+Version: 1.0
+```
+### 1. Description ###
+This branch is singularity-based version on [docker_train](https://svn.bcgsc.ca/bitbucket/projects/MLOVCA/repos/docker_train/browse) master branch.
+### 2. How to Use ###
+Follow steps in this [link](https://www.bcgsc.ca/wiki/display/OVCARE/Singularity+on+Numbers).
+
+
+To build singularity image
+
+```
+$singularity build --fakeroot singularity_train.sif Singularityfile.def
+```
+
+To run the container afterwards
+
+```
+$singularity run --nv singularity_train.sif from-experiment-manifest "path/to/manifest/file/location" 
+```
+
+### 3. Parameters ###
+
 
 ```
 usage: app.py [-h] [from-experiment-manifest path/to/experiment-manifest-file, from-arguments --experiment_name EXPERIMENT_NAME --batch_size BATCH_SIZE

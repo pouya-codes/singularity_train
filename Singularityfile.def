@@ -1,6 +1,8 @@
 Bootstrap: library
 From: debian:9
-
+%files
+    submodules/submodule_cv-0.0.1-py3-none-any.whl /opt
+    submodules/submodule_utils-0.0.1-py3-none-any.whl /opt
 %post
     apt-get update && apt-get -y upgrade
     apt-get -y install \
@@ -19,6 +21,7 @@ From: debian:9
     #Installing Anaconda 3 
     wget -c https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh
     /bin/bash Anaconda3-2020.02-Linux-x86_64.sh -bfp /usr/local
+    rm Anaconda3-2020.02-Linux-x86_64.sh
 
     #Conda configuration of channels from .condarc file
     conda config --file /.condarc --add channels defaults
@@ -26,8 +29,12 @@ From: debian:9
     conda update conda
     conda install -c conda-forge tensorboard
     conda install -c conda-forge protobuf
+    
+    #Install submodules
+    pip install /opt/submodule_cv-0.0.1-py3-none-any.whl
+    pip install /opt/submodule_utils-0.0.1-py3-none-any.whl
+    rm /opt/submodule_cv-0.0.1-py3-none-any.whl
+    rm /opt/submodule_utils-0.0.1-py3-none-any.whl
 
 %runscript
-    pip install submodules/submodule_cv-0.0.1-py3-none-any.whl
-    pip install submodules/submodule_utils-0.0.1-py3-none-any.whl
     python app.py $*
