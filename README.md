@@ -4,7 +4,7 @@
 
 ```
 Date Created: 22 July 2020
-Last Update: 11 April 2021 by Amirali
+Last Update: 11 May 2021 by Amirali
 Developer: Colin Chen
 Version: 1.0
 ```
@@ -252,6 +252,7 @@ usage: app.py from-arguments freeze_training [-h]
                                              [--delta DELTA]
                                              [--testing_model [TESTING_MODEL]]
                                              [--test_model_file_location TEST_MODEL_FILE_LOCATION]
+                                             [--old_version]
                                              --test_log_dir_location
                                              TEST_LOG_DIR_LOCATION
                                              [--detailed_test_result]
@@ -312,6 +313,9 @@ Testing:
                         Path to saved model is used for testing (i.e. /path/to/model.pth).Default uses the trained model during the training phase
                          (default: None)
 
+  --old_version         Convert trained model on previous version to the current one
+                         (default: False)
+
   --test_log_dir_location TEST_LOG_DIR_LOCATION
                         Location of results of the testing
                          (default: None)
@@ -343,5 +347,5 @@ Testing:
 
 
 Note: `freeze_training` subparser MUST be used in your manifest. Due to more readability, the parser is
-defined in this way (having multiple subparserss instead of just one). 
+defined in this way (having multiple subparserss instead of just one).
 

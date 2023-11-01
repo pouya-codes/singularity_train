@@ -254,6 +254,9 @@ def create_parser(parser):
                 help="Path to saved model is used for testing (i.e. /path/to/model.pth)."
                  "Default uses the trained model during the training phase")
 
+        test_parameters.add_argument("--old_version", action='store_true',
+                help="Convert trained model on previous version to the current one")
+
         test_parameters.add_argument("--test_log_dir_location", type=dir_path, required=True,
                 help="Location of results of the testing")
 

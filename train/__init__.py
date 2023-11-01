@@ -142,6 +142,7 @@ class ModelTrainer(PatchHanger):
         # testing model parameters
         self.testing_model = config.testing_model
         self.test_model_file_location = config.test_model_file_location
+        self.old_version = config.old_version
         self.test_log_dir_location = config.test_log_dir_location
         self.detailed_test_result = config.detailed_test_result
         self.testing_shuffle = config.testing_shuffle
@@ -484,6 +485,13 @@ class ModelTrainer(PatchHanger):
             self.writer.close()
             if self.scheduler:
                 print(f"Learning rates are: Feature_extraction={model.get_current_lr(0)}, Classifier={model.get_current_lr(1)}")
+        # If nothing is saved
+        if max_val_acc_idx==-1:
+            self.best_model_state_dict = deepcopy(model.model.state_dict())
+            model.save_state(self.model_dir_location,
+                                self.instance_name,
+                                iter_idx, epoch)
+            print("Saved model is initialized one!")
         return max_val_acc
 
     def freeze_train(self, model, training_loader, validation_loader):
@@ -547,5 +555,8 @@ class ModelTrainer(PatchHanger):
             if (self.best_model_state_dict and not self.test_model_file_location):
                 model.model.load_state_dict(self.best_model_state_dict)
             else:
-                model.load_state(self.test_model_file_location)
+                if self.old_version:
+                    model.load_state_old_version(self.test_model_file_location)
+                else:
+                    model.load_state(self.test_model_file_location)
             self.test(model, test_loader, 'Test')
