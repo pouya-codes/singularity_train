@@ -1,14 +1,18 @@
 {
-    "num_subtypes" : 2,
-    "deep_model" : "resnet34",
-    "continue_train" : false,
+    "model" :{
+        "num_subtypes" : 2,
+        "base_model" : "resnet18",
+        "pretrained" : false,
+        "last_layers": "short",
+        "concat_pool": true
+    },
     "normalize" : {
-        "normalize" : true,
+        "use_normalize" : true,
         "mean" : [ 0.7371, 0.6904, 0.8211 ],
         "std" : [ 0.0974, 0.0945, 0.0523 ]
     },
     "augmentation" : {
-        "augmentation": true,
+        "use_augmentation": true,
         "flip": true,
         "color_jitter": true,
         "rotation": true,
@@ -25,13 +29,11 @@
     "use_weighted_sampler" : false,
     "use_balanced_sampler" : true,
     "mix_up" : {
-        "mix_up" : true,
+        "use_mix_up" : true,
         "alpha": 0.4
     },
     "freeze": -1,
-    "parameters" : {
-        "pretrained" : true
-    },
+    "continue_train": false,
     "optimizer" : {
         "type" : "Adam",
         "parameters" : {
