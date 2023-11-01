@@ -110,11 +110,6 @@ def create_parser(parser):
         parser.add_argument("--model_config_location", type=str, required=True,
                 help="Path to model config JSON (i.e. /path/to/model_config.json).")
 
-        parser.add_argument("--patch_location", type=dir_path, required=False,
-                help="Path to root directory containing dataset patches specified in "
-                "group or split file (i.e. /path/to/patch/rootdir/). Used by Docker "
-                "to link the directory.")
-
         parser.add_argument("--num_patch_workers", type=int,
                 default=default_num_patch_workers,
                 help="Number of loader worker processes to multi-process data loading. "

@@ -82,9 +82,7 @@ class ModelTrainer(PatchHanger):
     model_config_location
     
     model_config : dict
-    
-    patch_location
-    
+
     num_patch_workers
     
     num_validation_batches
@@ -133,7 +131,6 @@ class ModelTrainer(PatchHanger):
         self.model_config_location = config.model_config_location
         self.model_config = self.load_model_config()
         # optional
-        self.patch_location = config.patch_location # unused
         self.num_patch_workers = config.num_patch_workers
         self.num_validation_batches = config.num_validation_batches
         self.gpu_id = config.gpu_id
@@ -199,7 +196,6 @@ class ModelTrainer(PatchHanger):
             'log_dir_location':    self.log_dir_location,
             'model_dir_location': self.model_dir_location,
             'model_config_location': self.model_config_location,
-            'patch_location':    self.patch_location,
             'num_patch_workers': self.num_patch_workers,
             'num_validation_batches': self.num_validation_batches,
             'gpu_id': self.gpu_id,
@@ -338,7 +334,8 @@ class ModelTrainer(PatchHanger):
 
         return overall_acc, overall_kappa, overall_f1, overall_auc
 
-    def test(self, model, test_loader):
+    def test(self, model, test_loader, tag):
+
         if (self.detailed_test_result) :
             detailed_output_file = open(os.path.join(self.test_log_dir_location, f'details_{self.instance_name}.csv'), 'w')
             detailed_output_writer = csv.writer(detailed_output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -384,7 +381,9 @@ class ModelTrainer(PatchHanger):
                 #         np.hstack((pred_probs, pred_prob))
         if (self.detailed_test_result):
             detailed_output_file.close()
-        return self.compute_metric(gt_labels, pred_labels, pred_probs, self.CategoryEnum, verbose=True, is_binary=self.is_binary)
+        print(f"{tag} Results:\n{40 * '*'}")
+        self.compute_metric(gt_labels, pred_labels, pred_probs, self.CategoryEnum, verbose=True, is_binary=self.is_binary)
+        print(f"{40 * '*'}")
 
     def train(self, model, training_loader, validation_loader):
         """Runs the training loop
@@ -484,8 +483,9 @@ class ModelTrainer(PatchHanger):
         validation_loader = self.create_data_loader(self.validation_chunks, shuffle=self.validation_shuffle)
         model = self.build_model()
         self.train(model, training_loader, validation_loader)
+        self.test(model, validation_loader,'Validation')
         if (self.testing_model) :
             setup_log_file(self.test_log_dir_location, self.instance_name)
             test_loader = self.create_data_loader(self.test_chunks, shuffle=self.testing_shuffle)
             model.model.load_state_dict(self.best_model_state_dict)
-            overall_acc, overall_kappa, overall_f1, overall_auc = self.test(model, test_loader)
+            self.test(model, test_loader, 'Test')

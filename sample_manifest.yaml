@@ -12,7 +12,7 @@ try_me:
     log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/logs/train
     model_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/weights
     model_config_location: /home/poahmadvand/share/Sub_Types/04_Train_Model/model_config/vgg19_3c_bn__n2__adam__lr_0_0002.json
-    patch_location: /projects/ovcare/classification/Diagnostic_TCGA_PDAC_cases/subtypes/X5_512/tumor_grade
+
     num_patch_workers: 3
     writer_log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/tumor_grade/tumor_grade_x5_256_vgg19_without_normalization/logs/train/tensorboard
     early_stopping:

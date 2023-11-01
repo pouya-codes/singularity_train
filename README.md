@@ -37,7 +37,7 @@ usage: app.py [-h] [from-experiment-manifest path/to/experiment-manifest-file, f
               [--patch_pattern PATCH_PATTERN] --chunk_file_location
               CHUNK_FILE_LOCATION --log_dir_location LOG_DIR_LOCATION
               --model_dir_location MODEL_DIR_LOCATION --model_config_location
-              MODEL_CONFIG_LOCATION [--patch_location PATCH_LOCATION]
+              MODEL_CONFIG_LOCATION 
               [--num_patch_workers NUM_PATCH_WORKERS]
               [--num_validation_batches NUM_VALIDATION_BATCHES]
               [--gpu_id GPU_ID] [--seed SEED] [--training_shuffle]
@@ -131,10 +131,6 @@ optional arguments:
 
   --model_config_location MODEL_CONFIG_LOCATION
                         Path to model config JSON (i.e. /path/to/model_config.json).
-                         (default: None)
-
-  --patch_location PATCH_LOCATION
-                        Path to root directory containing dataset patches specified in group or split file (i.e. /path/to/patch/rootdir/). Used by Docker to link the directory.
                          (default: None)
 
   --num_patch_workers NUM_PATCH_WORKERS

@@ -12,7 +12,6 @@ split1:
     log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/X5_256/tumor_grade/tumor_grade_x5_256_mobilenet_v2/logs/train
     model_dir_location: /projects/ovcare/classification/pouya/models/subtypes/X5_256/tumor_grade/tumor_grade_x5_256_mobilenet_v2/weights
     model_config_location: /home/poahmadvand/share/Sub_Types/04_Train_Model/model_config/tumor_grade.json
-    patch_location: /projects/ovcare/classification/Diagnostic_TCGA_PDAC_cases/subtypes/X5_512/tumor_grade
     num_patch_workers: 3
     writer_log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/X5_256/tumor_grade/tumor_grade_x5_256_mobilenet_v2/logs/train/tensorboard
     early_stopping:
@@ -37,7 +36,6 @@ split2:
     log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/X5_256/tumor_grade/tumor_grade_x5_256_mobilenet_v2/logs/train
     model_dir_location: /projects/ovcare/classification/pouya/models/subtypes/X5_256/tumor_grade/tumor_grade_x5_256_mobilenet_v2/weights
     model_config_location: /home/poahmadvand/share/Sub_Types/04_Train_Model/model_config/tumor_grade.json
-    patch_location: /projects/ovcare/classification/Diagnostic_TCGA_PDAC_cases/subtypes/X5_512/tumor_grade
     num_patch_workers: 3
     writer_log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/X5_256/tumor_grade/tumor_grade_x5_256_mobilenet_v2/logs/train/tensorboard
     early_stopping:
@@ -62,7 +60,6 @@ split3:
     log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/X5_256/tumor_grade/tumor_grade_x5_256_mobilenet_v2/logs/train
     model_dir_location: /projects/ovcare/classification/pouya/models/subtypes/X5_256/tumor_grade/tumor_grade_x5_256_mobilenet_v2/weights
     model_config_location: /home/poahmadvand/share/Sub_Types/04_Train_Model/model_config/tumor_grade.json
-    patch_location: /projects/ovcare/classification/Diagnostic_TCGA_PDAC_cases/subtypes/X5_512/tumor_grade
     num_patch_workers: 3
     writer_log_dir_location: /projects/ovcare/classification/pouya/models/subtypes/X5_256/tumor_grade/tumor_grade_x5_256_mobilenet_v2/logs/train/tensorboard
     early_stopping:
