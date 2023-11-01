@@ -1,40 +1,20 @@
-# Singularity Train
+# Train
 
-**Before runing any experiment to be sure you are using the latest commits of all modules run the following script:**
-```
-/projects/ovcare/classification/singularity_modules/update_moudles.sh
-```
 ### Development Information ###
 
 ```
 Date Created: 22 July 2020
-Last Update: Tue Apr 6 16:37:09 PST 2021 by Amirali
+Last Update: 11 April 2021 by Amirali
 Developer: Colin Chen
 Version: 1.0
 ```
-### 1. Description ###
-This branch is singularity-based version on [docker_train](https://svn.bcgsc.ca/bitbucket/projects/MLOVCA/repos/docker_train/browse) master branch.
-### 2. How to Use ###
-Follow steps in this [link](https://www.bcgsc.ca/wiki/display/OVCARE/Singularity+on+Numbers).
 
-
-To build singularity image
-
+**Before running any experiment to be sure you are using the latest commits of all modules run the following script:**
 ```
- build --remote singularity_train.sif Singularityfile.def
+(cd /projects/ovcare/classification/singularity_modules ; ./update_modules.sh --bcgsc-pass your/bcgsc/path)
 ```
 
-To run the container afterwards
-
-```
- run --nv singularity_train.sif from-experiment-manifest path/to/manifest/file/location
-```
-
-Here's an example of the setup you can use:
-
-`sample_manifest.yaml`
-
-### 3. Usage ###
+### Usage ###
 ```
 
 usage: app.py [-h] {from-experiment-manifest,from-arguments} ...
@@ -55,48 +35,62 @@ Trains a model for patch classification. This process does the training in the f
 
  (2) The flag --model_config_location specifies a path to a JSON file containing model hyperparameters. It is a residue of an old config format that didn't have a time to get refactored. For most of the experiments at AIM Lab, we currently use the below config JSON. The primary change is to set the num_subtypes
 
-    "num_subtypes" : 2,
-    "deep_model" : "efficientnet-b0",
-    "continue_train" : false,
+{
+    "model" :{
+        "num_subtypes" : 2,
+        "base_model" : "resnet18",
+        "pretrained" : false,
+        "last_layers": "short",
+        "concat_pool": true
+    },
     "normalize" : {
-        "normalize" : true,
-        "mean" : [ 0.8731, 0.8085, 0.9004 ],
-        "std" : [ 0.1539, 0.2028, 0.1125 ]
+        "use_normalize" : false,
+        "mean" : [ 0.7371, 0.6904, 0.8211 ],
+        "std" : [ 0.0974, 0.0945, 0.0523 ]
     },
     "augmentation" : {
-        "augmentation": true,
+        "use_augmentation": false,
         "flip": true,
         "color_jitter": true,
         "rotation": true,
         "cut_out": {
             "num_cut": 2,
-            "size_cut": 50,
-            "color_cut": "black"
+            "size_cut": 100,
+            "color_cut": "white"
         }
     },
     "use_weighted_loss" : {
         "use_weighted_loss" : false,
-        "weight": [0.123, 1.877]
+        "weight": [2, 1]
     },
     "use_weighted_sampler" : false,
-    "use_balanced_sampler" : true,
+    "use_balanced_sampler" : false,
     "mix_up" : {
-        "mix_up" : false,
+        "use_mix_up" : false,
         "alpha": 0.4
     },
     "freeze": -1,
-    "parameters" : {
-        "pretrained" : true
-    },
+    "continue_train": false,
     "optimizer" : {
         "type" : "Adam",
         "parameters" : {
-            "lr" : 0.00003,
+            "lr" : 0.00001,
             "amsgrad" : true,
-            "weight_decay" : 0.0001
+            "weight_decay" : 0.0005
+        }
+    },
+    "scheduler" : {
+        "type" : "OneCycleLR",
+        "parameters" : {
+            "max_lr" : 0.01,
+            "steps_per_epoch" : 1202,
+            "epochs" : 10,
+            "three_phase": true
         }
     }
 }
+
+    (2.1) If you do not want to use scheduler, remove it from the JSON file.
 
  (3) For each epoch (specified by --epochs), we train the classifier using all patches in the training set, feeding the classifier a batch of patches (with size specified by --batch_size). At every batch interval (specififed by --validation_interval) we run validation loop and save (or overwrite) the model if it achieves the as of yet highest validation accuracy.
 
@@ -139,16 +133,15 @@ usage: app.py from-arguments [-h] --experiment_name EXPERIMENT_NAME
                              [--num_patch_workers NUM_PATCH_WORKERS]
                              [--num_validation_batches NUM_VALIDATION_BATCHES]
                              [--gpu_id GPU_ID]
-                             [--progressive_resizing [PROGRESSIVE_RESIZING ...]]
-                             [--scheduler_step SCHEDULER_STEP]
                              [--number_of_gpus NUMBER_OF_GPUS] [--seed SEED]
                              [--training_shuffle] [--validation_shuffle]
+                             [--progressive_resizing PROGRESSIVE_RESIZING [PROGRESSIVE_RESIZING ...]]
+                             [--scheduler_step {epoch,batch}]
                              [--writer_log_dir_location WRITER_LOG_DIR_LOCATION]
-                             {freeze_training,early_stopping,test_model,slide_level_accuracy}
-                             ...
+                             {freeze_training,early_stopping,test_model} ...
 
 positional arguments:
-  {early_stopping,test_model,slide_level_accuracy}
+  {freeze_training,early_stopping,test_model}
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -226,14 +219,6 @@ optional arguments:
                         The number of GPUs to use. Default uses a GPU with the most free memory.
                          (default: 1)
 
-  --progressive_resizing [PROGRESSIVE_RESIZING ...]
-                        One of the techniques that enables the model to be trained on different input sizes. The inputs are resized to the selected value and trained on them in order of the size. For example, [32, 256, 512] means that the model will be trained first on 32, then 256, and at last on 512.
-                         (default: None)
-
-  --scheduler_step SCHEDULER_STEP
-                        If a scheduler is defined in the config file, it enables the step for that. It should be 'epoch' or 'batch'. It depends on the scheduler, for example OneCycleLR needs to be stepped in batch.
-                         (default: None)
-
   --seed SEED           Seed for random shuffle.
                          (default: 256)
 
@@ -243,77 +228,84 @@ optional arguments:
   --validation_shuffle  Shuffle the validation set.
                          (default: False)
 
+  --progressive_resizing PROGRESSIVE_RESIZING [PROGRESSIVE_RESIZING ...]
+                        One of the techniques that enables the model to be trained on different input sizes. The inputs are resized to the selected value and trained on them in order of the size. For example, [32, 256, 512] means that the model will be trained first on 32, then 256, and at last on 512.
+                         (default: [-1])
+
+  --scheduler_step {epoch,batch}
+                        If a scheduler is defined in the config file, it enables the step for that. It should be 'epoch' or 'batch'. It depends on the scheduler, for example OneCycleLR needs to be stepped in batch.
+                         (default: None)
+
   --writer_log_dir_location WRITER_LOG_DIR_LOCATION
                         Directory in log_dir_location to put TensorBoard logs.Default uses log_dir_location/experiment_name.
                          (default: None)
 
 usage: app.py from-arguments freeze_training [-h]
-                                            [--use_freeze_training [USE_FREEZE_TRAINING]]
-                                            [--freeze_epochs FREEZE_EPOCHS]
-                                            [--unfreeze_epochs UNFREEZE_EPOCHS]
-                                            [--base_lr BASE_LR]
-                                            [--lr_mult LR_MULT]
-                                            [--use_scheduler [USE_SCHEDULER]]
+                                             [--use_freeze_training [USE_FREEZE_TRAINING]]
+                                             [--freeze_epochs FREEZE_EPOCHS]
+                                             [--unfreeze_epochs UNFREEZE_EPOCHS]
+                                             [--base_lr BASE_LR]
+                                             [--lr_mult LR_MULT]
+                                             [--use_scheduler]
+                                             [--use_early_stopping [USE_EARLY_STOPPING]]
+                                             [--patience PATIENCE]
+                                             [--delta DELTA]
+                                             [--testing_model [TESTING_MODEL]]
+                                             [--test_model_file_location TEST_MODEL_FILE_LOCATION]
+                                             --test_log_dir_location
+                                             TEST_LOG_DIR_LOCATION
+                                             [--detailed_test_result]
+                                             [--testing_shuffle]
+                                             [--test_chunks TEST_CHUNKS [TEST_CHUNKS ...]]
+                                             [--calculate_slide_level_accuracy [CALCULATE_SLIDE_LEVEL_ACCURACY]]
+                                             [--slide_level_accuracy_threshold SLIDE_LEVEL_ACCURACY_THRESHOLD]
+                                             [--slide_level_accuracy_verbose [SLIDE_LEVEL_ACCURACY_VERBOSE]]
 
 optional arguments:
   -h, --help            show this help message and exit
 
+Freeze Training:
+  Enable parameters for training with both freeze or unfreeze setup. The models are divided into two parts of Feature Extraction and Classifier. In freeze, batch normalization layers of Feature Extraction and all the layers of Classifier  are trained. In unfreeze, all layers are trained. Freeze Training means that train the second part (classsifier) for some epochs, and then train the whole model toghether.
+
   --use_freeze_training [USE_FREEZE_TRAINING]
-                        Uses Freeze Training. Models are divided into two parts: 1.feature_extraction 2.classifier
-                        Freeze Training means that train the second part (classsifier) for some epochs, and then train the whole model toghether.
+                        Enable Freeze Training
                          (default: False)
 
-  --freeze_epochs FREEZE_EPOCHS   
-                        Number of epochs the classifier part (+batch_normalization from feature_extraction) should be trained.
+  --freeze_epochs FREEZE_EPOCHS
+                        Number of epochs model should be tranied in freeze mode.
                          (default: 1)
 
   --unfreeze_epochs UNFREEZE_EPOCHS
-                        Number of epochs the whole model should be trained.
+                        Number of epochs model should be tranied in unfreeze mode.
                          (default: 5)
 
   --base_lr BASE_LR     Base learning rate. In freeze part, the classifier learning part will be base_lr, and the feature_extraction will be base_lr/10.
-                         (default: 2e-3)
+                         (default: 0.002)
+
   --lr_mult LR_MULT     In unfreeze part, the classifier learning part will be base_lr/2, and the feature_extraction will be base_lr/(2*lr_mult).
                          (default: 100)
 
-  --use_scheduler [USE_SCHEDULER]
-                        Using scheduler. If any scheduler is defined in the config file, it will use that. Otherwise, the model will use OneCycleLR.
+  --use_scheduler       Using scheduler; If a scheduler is defined in the config file, it will use that. Otherwise, the model will use OneCycleLR.
                          (default: False)
 
-
-  --testing_model [TESTING_MODEL]
-                        Test the model performance after trai
-
-usage: app.py from-arguments early_stopping [-h]
-                                            [--use_early_stopping [USE_EARLY_STOPPING]]
-                                            [--patience PATIENCE]
-                                            [--delta DELTA]
-                                            [--testing_model [TESTING_MODEL]]
-                                            [--test_model_file_location TEST_MODEL_FILE_LOCATION]
-                                            --test_log_dir_location
-                                            TEST_LOG_DIR_LOCATION
-                                            [--detailed_test_result]
-                                            [--testing_shuffle]
-                                            [--test_chunks TEST_CHUNKS [TEST_CHUNKS ...]]
-                                            [--calculate_slide_level_accuracy [CALCULATE_SLIDE_LEVEL_ACCURACY]]
-                                            [--slide_level_accuracy_threshold SLIDE_LEVEL_ACCURACY_THRESHOLD]
-                                            [--slide_level_accuracy_verbose [SLIDE_LEVEL_ACCURACY_VERBOSE]]
-
-optional arguments:
-  -h, --help            show this help message and exit
+Early Stopping:
+  Enable early stopping.
 
   --use_early_stopping [USE_EARLY_STOPPING]
-                        Uses EarlyStoppingDefault uses False
+                        Enable Early Stopping
                          (default: False)
 
-  --patience PATIENCE   How long to wait after last time validation loss improved.Default: 7
+  --patience PATIENCE   How long to wait after last time validation loss improved.
                          (default: 7)
 
-  --delta DELTA         Minimum change in the monitored quantity to qualify as an improvement.Default: 0
+  --delta DELTA         Minimum change in the monitored quantity to qualify as an improvement.
                          (default: 0)
 
+Testing:
+  Enable parameters for testing.
+
   --testing_model [TESTING_MODEL]
-                        Test the model performance after trainingDefault uses False
+                        Test the model performance after training
                          (default: False)
 
   --test_model_file_location TEST_MODEL_FILE_LOCATION
@@ -328,7 +320,7 @@ optional arguments:
                         Provides deatailed test results, including paths to image files, predicted label, target label, probabilities of classesDefault uses False
                          (default: False)
 
-  --testing_shuffle     Shuffle the testing set.Default uses False
+  --testing_shuffle     Shuffle the testing set.
                          (default: False)
 
   --test_chunks TEST_CHUNKS [TEST_CHUNKS ...]
@@ -336,20 +328,16 @@ optional arguments:
                          (default: [2])
 
   --calculate_slide_level_accuracy [CALCULATE_SLIDE_LEVEL_ACCURACY]
-                        Weather calculate slide level accuracyDefault uses False
+                        Wether calculate slide level accuracy
                          (default: False)
 
   --slide_level_accuracy_threshold SLIDE_LEVEL_ACCURACY_THRESHOLD
-                        Minimum threshold that the patch labels probabilities should pass to be considered in the slide level voting.Default: 1/number_of_classes
+                        Minimum threshold that the patch labels probabilities should pass to be considered in the slide level voting. Default: 1/number_of_classes
                          (default: 0)
 
   --slide_level_accuracy_verbose [SLIDE_LEVEL_ACCURACY_VERBOSE]
-                        Verbose the detail for slide level accuracyDefault uses False
+                        Verbose the detail for slide level accuracy
                          (default: False)
 
-usage: app.py from-arguments test_model [-h]
-
-optional arguments:
-  -h, --help  show this help message and exit
-
 ```
+
