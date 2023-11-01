@@ -215,8 +215,7 @@ class ModelTrainer(PatchHanger):
                 cur_data = cur_data.cuda()
                 cur_label = cur_label.cuda()
                 logits, pred_prob, output = model.forward(cur_data)
-                model.optimize_parameters(logits, cur_label, output)
-                val_loss += model.get_current_errors()
+                val_loss += model.get_loss(logits, cur_label, output).item()
                 # if self.is_binary:
                 #     pred_labels += (pred_prob >=
                 #             0.5).type(torch.int).cpu().numpy().tolist()
@@ -230,7 +229,7 @@ class ModelTrainer(PatchHanger):
                 val_loss / val_idx, global_step=iter_idx)
         return accuracy_score(gt_labels, pred_labels)
 
-    def train(self, model, training_loader, validation_loader, writer):
+    def train(self, model, training_loader, validation_loader):
         """Runs the training loop
 
         Parameters
