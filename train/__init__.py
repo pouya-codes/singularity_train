@@ -19,6 +19,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import confusion_matrix
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from copy import deepcopy
 
 import submodule_utils as utils
 from submodule_cv import (ChunkLookupException, setup_log_file,
@@ -450,7 +451,7 @@ class ModelTrainer(PatchHanger):
                                 self.instance_name,
                                 iter_idx, epoch)
                         # store best state of model for testing
-                        self.best_model_state_dict = model.model.state_dict()
+                        self.best_model_state_dict = deepcopy(model.model.state_dict())
                     if (self.early_stopping):
                         early_stopping(val_loss, model.model)
                         if early_stopping.early_stop:
@@ -487,6 +488,6 @@ class ModelTrainer(PatchHanger):
         if (self.testing_model) :
             setup_log_file(self.test_log_dir_location, self.instance_name)
             test_loader = self.create_data_loader(self.test_chunks, shuffle=self.testing_shuffle)
-            # model.model.load_state_dict(self.best_model_state_dict)
-            model.load_state(self.model_file_location)
+            model.model.load_state_dict(self.best_model_state_dict)
+            # model.load_state(self.model_file_location)
             self.test(model, test_loader, 'Test')
